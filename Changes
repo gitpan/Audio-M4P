@@ -1,0 +1,24 @@
+Revision history for Perl modules under Audio::M4P
+
+0.01 Wed April 28 2004
+    - original version (alphas were called Crypt::MP4Stream)
+
+0.02 Fri April 30 2004
+    - portability changes 
+
+0.03 Sat May 8 2004
+    - some loop optimization and minor tweaks
+    
+0.04 Tue June 15 2004
+    - upgraded to ITunes 4.6, added fix
+    
+0.05 Mon July 12 2004
+    - removed some OS specific code in new() to allow Solaris to use
+    
+0.06 Mon April 18 2005
+    - First revision since iTunes 4.7+ version incompatibility began
+    - changed name from Audio::M4pDecrypt to Audio::M4P::Decrypt
+    - Added analysis and meta data editing
+    - refactored original code into four .pm files, with additional functionality
+    
+

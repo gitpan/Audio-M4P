@@ -1,0 +1,5 @@
+TODO list for Perl modules under Audio::M4P
+    - the local key retrival needs to work on all platforms
+    - MP4 audiovisual movie analysis and markup needs testing
+    
+

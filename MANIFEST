@@ -1,0 +1,12 @@
+MANIFEST
+LICENSE
+README
+Todo
+Changes
+lib/Audio/M4P/Decrypt.pm
+lib/Audio/M4P/QuickTime.pm
+lib/Audio/M4P/Atom.pm
+bin/M4pDecrypt.PL
+t/01_test.t
+Makefile.PL
+META.yml

@@ -1,0 +1,16 @@
+# http://module-build.sourceforge.net/META-spec.html
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         Audio-M4P
+version:      0.06
+version_from: lib/Audio/M4P/Decrypt.pm
+installdirs:  site
+requires:
+    Crypt::Rijndael:               0
+    Digest::MD5:                   0
+    Test::More:                    0
+    Tree::Simple:                  0
+    Tree::Simple::View::HTML:      0
+    Tree::Simple::Visitor:         0
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.17
