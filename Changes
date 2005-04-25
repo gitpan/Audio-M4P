@@ -21,4 +21,5 @@ Revision history for Perl modules under Audio::M4P
     - Added analysis and meta data editing
     - refactored original code into four .pm files, with additional functionality
     
-
+0.07 Mon April 25 2005
+    - Revision to pod docs

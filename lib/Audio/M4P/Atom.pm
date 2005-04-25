@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -240,8 +240,26 @@ sub print {
       " size ". $self->size . " ends at " . ($self->start + $self->size);
 }
 
+
 =head1 NAME
 
+Audio::M4P::Atom -- M4P/MP4/M4A QuickTime audio music format atoms
+
+=head1 DESCRIPTION
+    
+M4P is a QuickTime protected audio file format. It is composed of a linear
+stream of bytes which are segmented into units called atoms. Some atoms
+may contain other atoms. This module has methods for handling atoms which 
+are delegated by the QuickTime and other modules in the Audio::M4p hierarchy.
+   
+=head1 AUTHOR 
+
+    William Herrera B<wherrera@skylightview.com>. 
+
+=head1 SUPPORT 
+
+Questions, feature requests and bug reports should go to 
+<wherrera@skylightview.com>.
 
 
 =cut

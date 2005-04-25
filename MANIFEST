@@ -3,6 +3,7 @@ LICENSE
 README
 Todo
 Changes
+lib/Audio/M4P.pm
 lib/Audio/M4P/Decrypt.pm
 lib/Audio/M4P/QuickTime.pm
 lib/Audio/M4P/Atom.pm
