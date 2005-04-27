@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 use Audio::M4P::Atom;
 
@@ -303,86 +303,90 @@ sub SetMetaInfo {
 
 =head1 NAME
 
-Audio::M4P::QuickTime -- Perl module for m4p Quicktime audio files
+Audio::M4P::QuickTime -- Perl module for m4p/mp4/m4a Quicktime audio files
 
 =head1 DESCRIPTION
 
 In late 2004 an update to iTunes made that program incompatible with decrypted 
 files still containing meta information identifying the content as having been 
-purchased via iTMS. This forced an update to Audio::M4pDecrypt which now strips
-such meta information from the file. As a happy side effect of these changes,
-this module now allows extraction and modification of meta information in such
-files, similar to the MP3::Info and MP$::Info modules.
+purchased via iTMS. This forced an update to the module Audio::M4pDecrypt 
+(now renamed Audio::M4P::Decrypt), which now strips such meta information from 
+the file. As a happy side effect of these changes, this module, part of the 
+Audio::M4P distribution, now allows extraction and modification of meta 
+information in such files, similar to the MP3::Info and MP4::Info modules.
 
-=over 4
+About QuickTime File Structure and Atoms
 
-    B<About QuickTime File Structure and Atoms> 
-
-    Quicktime mp4 files are arranged as a stream of 'atoms', each containing a  
-    header consisting of size and type information followedby data. The data 
-    may contain other Quicktime atoms. iTMS (m4p) music files are Quicktime audio 
-    files which are encrypted using a combination of information in the file's 
-    drms atom and information which is commonly stored on the computer or audio 
-    player. 
+Quicktime (MP4) files are arranged as a stream of 'atoms', each containing 
+a header consisting of size and type information followedby data. The data 
+may contain other Quicktime atoms. iTMS (M4P) music files are Quicktime 
+audio files which are encrypted using a combination of information in the 
+file's drms atom and information which is commonly stored on the computer 
+or audio player. 
     
-=back
 
 =head1 SYNOPSIS
 
-use Audio::M4P::QuickTime;
+=over 4
 
-my $mp4file = "file.m4p";
+ use Audio::M4P::QuickTime;
 
-my $qt = new Audio::M4P::QuickTime(file => $mp4file);
+ my $mp4file = "file.m4p";
 
-my $tags = $qt->GetMetaInfo;
+ my $qt = new Audio::M4P::QuickTime(file => $mp4file);
 
-print "Artist is $tags->{ARTIST}\n" if $tags->{ARTIST};
+ my $tags = $qt->GetMetaInfo;
+
+ print "Artist is $tags->{ARTIST}\n" if $tags->{ARTIST};
+
+=back
 
 =head1 METHODS
 
-item B<new>
+=over 4
 
-my $qt = Audio::M4P::QuickTime->new;
+=item B<new>
 
-$qt = new Audio::M4P::QuickTime(
-  DEBUG => 1, 
-  DEBUGDUMPFILE => 'quchtime_treedump.html'
-);
+ my $qt = Audio::M4P::QuickTime->new;
 
-$qt = new Audio::M4P::QuickTime(file => 'qt_audio_file.m4p');
+ $qt = new Audio::M4P::QuickTime(
+   DEBUG => 2, 
+   DEBUGDUMPFILE => 'quicktime_treedump.html'
+ );
+
+ $qt = new Audio::M4P::QuickTime(file => 'qt_audio_file.m4p');
 
 Create a new Audio::M4P::QuickTime object. DEBUG => 1 as argument causes 
-parse and other information to be printed to stdout during processing.
-DEBUGDUNMPFILE => "file" causes a tree representation of the QuickTime file
-to be emitted to the file given as value to the argument pair.
-file => "filename.m4p" causes the QuichTime file listed to be read and 
-parsed during object initialization.
+parse and other information to be printed to stdout during processing. 
+DEBUG => 2, DEBUGDUNMPFILE => "file" causes an HTML tree representation 
+of the QuickTime file to be emitted to the file given as value to the 
+argument pair. file => "filename.m4p" causes the named QuickTime file to 
+be read and parsed during object initialization.
 
-item B<ReadFile>
+=item B<ReadFile>
 
-$qt->ReadFile("filename.m4a");
+ $qt->ReadFile("filename.m4a");
 
-Read the listed file into the QuickTime object buffer.
+Read the named file into the QuickTime object buffer.
 
-item B<ParseBuffer>
+=item B<ParseBuffer>
 
-$qt->ParseBufffer;
+ $qt->ParseBufffer;
 
 Parse the file that has been read as a QuickTime stream.
 
-item B<WriteFile>
+=item B<WriteFile>
 
-$qt->WriteFile("ouput.m4p");
+ $qt->WriteFile("ouput.m4p");
 
-Write the (possible modified) file back to the output file argument.
+Write the (possibly modified) file back to the output file argument.
 
-item B<GetMetaInfo>
+=item B<GetMetaInfo>
 
-my $hashref = $qt->GetMetaInfo;
-while(my($tag, $value) = each %{$hashref}) { 
+ my $hashref = $qt->GetMetaInfo;
+ while(my($tag, $value) = each %{$hashref}) { 
     print "$tage => $value\n";
-}
+ }
 
 Returns a hash reference to meta tag information. Attempts to be compatible 
 with tag information formats in MP3::Info and MP4::Info. Potential tags are 
@@ -392,22 +396,23 @@ with MP3::Info by returning tag info as a hash reference, duplicate entries of
 the same tag name, such as multiple comment fields, will not be returned in the hash 
 reference.
 
-item B<GetMP4Info>
+=item B<GetMP4Info>
 
-my $hashref = $qt->GetMP4Info;
-while(my($tag, $value) = each %{$hashref}) { 
+ my $hashref = $qt->GetMP4Info;
+ while(my($tag, $value) = each %{$hashref}) { 
     print "$tage => $value\n";
-}
+ }
 
-Returns a hash reference to MP3/MP4 audio information. Attempts to be 
-compatible with tag information formats in MP3::Info and MP4::Info. 
-Potential tags are LAYER (1), VERSION (4), SIZE, SECONDS, SS, MM, and BITRATE.
+Returns a hash reference to MP3 tag audio information. Attempts to be compatible 
+with tag information formats in MP3::Info and MP4::Info. Potential tags are 
+LAYER (1), VERSION (4), SIZE, SECONDS, SS, MM, and BITRATE.
 
-item B<SetMetaInfo>
+=item B<SetMetaInfo>
 
-my $comment = "After paying for this music file, I have fair use rights to change it.";
-$qt->SetMetaInfo(COMMENT => $comment);
-$qt->SetMetaInfo(GENRE => "Bebop", 1, 'day');
+ my $comment = "After paying for this music file, I have fair use rights to change it.";
+
+ $qt->SetMetaInfo(COMMENT => $comment);
+ $qt->SetMetaInfo(GENRE => "Bebop", 1, 'day');
 
 Set a meta information field. The third argument, if given and true, indicates
 that the program should replace all instances of meta data of this type with 
@@ -415,7 +420,11 @@ the new entry, rather than adding the tag to the existing meta data. The fourth
 argument, if given and true, indicated a tag value before which the new tag is
 to be placed in the file.
 
-=head BUGS
+=back
+
+=head1 BUGS
+
+=over 4
 
 There ought to be a DWIM way to set iTunes M4P compatible metadata without 
 pack() gymnastics.
@@ -423,6 +432,13 @@ pack() gymnastics.
 No support in Atom.pm currently for resizing of single atoms over 
 4294967296 bytes (4.2 gigabytes) in size. This should only occur with 
 large movie files, not with MP4 audio.
+
+The Audio::M4P::* code is not re-entrant, due to recursive changes to 
+containers not being thread-safe. Threaded code using these modules 
+may need to lock down all method calls with a semaphore or other 
+serialization method.
+
+=back
 
 =head1 AUTHOR 
 

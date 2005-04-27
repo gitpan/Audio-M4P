@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Audio-M4P
-version:      0.07
+version:      0.08
 version_from: lib/Audio/M4P/Decrypt.pm
 installdirs:  site
 requires:
