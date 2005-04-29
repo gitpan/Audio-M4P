@@ -1,11 +1,11 @@
 package Audio::M4P::QuickTime;
 
-require 5.004;
+require 5.006;
 use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.08';
+$VERSION = '0.09';
 
 use Audio::M4P::Atom;
 
@@ -83,7 +83,7 @@ sub ParseBuffer {
       type =>'file',
       size => length $self->{buffer},
       start => 0,
-      offset => 16,
+      offset => 8,
       parent => 0,
     );
     my $fsize = length $self->{buffer};
@@ -258,9 +258,9 @@ sub GetMP4Info {
     $meta->{LAYER} = 1;
     $meta->{VERSION} = 4;
     $meta->{COPYRIGHT} = (exists $meta->{CPRT}) ? 1 : 0;
-    my $mdat = FindAtom('mdat');
-    $self->{SIZE} = $mdat->size || 1;
-    my $mvhd_data = $self->FindAtomData('mvhv');
+    my $mdat = $self->FindAtom('mdat');
+    $meta->{SIZE} = $mdat->size || 1;
+    my $mvhd_data = $self->FindAtomData('mvhd');
     my($timescale, $duration);
     if($mvhd_data) {
         my @mvhd = unpack('Ca3NNNNNN', $mvhd_data);
@@ -274,7 +274,7 @@ sub GetMP4Info {
         }
         $meta->{SECONDS} = int($duration / $timescale + 0.5);
         $meta->{MM} = int($meta->{SECONDS} / 60);
-        $meta->{SS} = $meta->{SECONDS} % $self->{MM};
+        $meta->{SS} = $meta->{SECONDS} % 60;
         $meta->{BITRATE} = int($meta->{SIZE} / $meta->{SECONDS} + 0.5);
     }
     return $meta;

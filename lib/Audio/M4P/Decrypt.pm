@@ -1,11 +1,11 @@
 package Audio::M4P::Decrypt;
 
-require 5.004;
+require 5.006;
 use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.08';
+$VERSION = '0.09';
 
 use Crypt::Rijndael;
 use Digest::MD5;
