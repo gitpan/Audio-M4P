@@ -29,3 +29,16 @@ Revision history for Perl modules under Audio::M4P
     
 0.09 Fri April 29 2005
     - fractional seconds in metadata SS field calculation bugfix
+    
+0.10 Mon May 9 2005
+    - further pod revision
+    
+0.11 Wed May 25 2005
+    - corrected meta info atom types bug where '©alb' and '@alb' were exchanged
+    - added meta info compatibility function for iTMS XML data sent with 
+      itms:// url's (the iTMS_MetaInfo method)
+
+
+
+
+    

@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.09';
+$VERSION = '0.11';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -152,9 +152,10 @@ sub resizeContainers {
     my $parent = $self->{parent};
     if($parent and ref $parent) {
         my $container = $parent->getNodeValue();
-        if($container->type ne 'file') {
+        if($container->{type} ne 'file') {
             $container->size($container->size + $diff);
-            $container->resizeContainers($diff);
+            $container->resizeContainers($diff) 
+              unless $container->{type} eq 'moov';
         }
     }
 }
@@ -203,7 +204,7 @@ sub insertNewMetaData {
     my $wrapper = $self->insertNew($type, '', $before);
     my $flag = ($type =~ /gnre|disk|trkn/) ? 0 : 
       ($type =~ /rtng/) ? 21 : 1;
-    $wrapper->insertNew('data', pack ('NN', $flag, 0) . $data);
+    $wrapper->insertNew('data', pack('NN', $flag, 0) . $data);
 }
 
 sub Container {

@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.09';
+$VERSION = '0.11';
 
 use Crypt::Rijndael;
 use Digest::MD5;
@@ -94,13 +94,13 @@ Originally derived from the DeDRMS.cs program by Jon Lech Johansen
 
 =head1 SYNOPSIS
 
-    use Audio::M4P::Decrypt;
+ use Audio::M4P::Decrypt;
 
-    my $outfile = 'mydecodedfile';
-    my $deDRMS = new Audio::M4P::Decrypt;
-    $deDRMS->DeDRMS($mp4file, $outfile);
+ my $outfile = 'mydecodedfile';
+ my $deDRMS = new Audio::M4P::Decrypt;
+ $deDRMS->DeDRMS($mp4file, $outfile);
 
-    See also the M4pDecrypt.pl example program in this distribution.
+See also the M4pDecrypt.pl example program in this distribution.
 
 =head1 METHODS
 
@@ -108,13 +108,11 @@ Originally derived from the DeDRMS.cs program by Jon Lech Johansen
 
 =item B<new>
 
-my $cs = new Audio::M4pDecrypt;
+ my $cs = new Audio::M4P::Decrypt;
 
-my $cs_conparam = Audio::M4P::Decrypt->new(
-  strHome => '/winroot/Documents and Settings/administrator/Application Data',
-  sPfix => '.', 
-  dirSep => '/'
-);
+ my $cs_conparam = Audio::M4P::Decrypt->new(
+     strHome => '~', sPfix => '.', dirSep => '/'
+ );
 
 Optional arguments: strHome is the directory containing the keyfile directory.
 After running VLC on a .m4p file under Windows, MacOS X, and Linux, this should
@@ -123,16 +121,17 @@ Linux). sPfix is '.' for MacOS/*nix, nil with Windows. dirSep is the char that
 separates directories, often /.
 
 For debugging purposes, use eg:
-my $cs_conparam = Audio::M4P::Decrypt->new(
-  DEBUG => 1, DEBUGDUMPFILE => 'm4ptree.html'
-);
+ my $cs_conparam = Audio::M4P::Decrypt->new(
+     DEBUG => 1, DEBUGDUMPFILE => 'm4ptree.html'
+ );
 
-DEBUG turns on debugging output. DEBUGDUMPFILE is an output file name to dump  an html picture of the m4p data structure. 
+DEBUG turns on debugging output. DEBUGDUMPFILE is an output file name to dump 
+an html picture of the m4p data structure. 
 
 =item B<DeDRMS>
 
-my $cs = new Audio::M4P::Decrypt;
-$cs->DeDRMS('infilename', 'outfilename');
+ my $cs = new Audio::M4P::Decrypt;
+ $cs->DeDRMS('infilename', 'outfilename');
 
 Decode infilename, write to outfilename. Reading slurps up an entire file,
 so output can overwrite the same file without a problem, we hope. Backup first.
@@ -145,16 +144,19 @@ More descriptive alias for the B<DeDRMS> method.
 
 =back
 
-=item B<NOTES>
+=head1 B<SEE ALSO>
+
+=item L<LWP::UserAgent::iTMS_Client>
+
+=head1 B<NOTES>
 
     This software is designed to allow different but fair use of music by the 
     purchaser of the music. In no way is this software intended to facilitate 
     use of digital music files by parties other than the purchaser of the 
     originally DRM-protected material. That is Fair Use, corporate entities. 
 
-    Note that later versions of iTunes are not compatible with vlc's key finding;
-    for locating keys, look for compatible versions of Johansen's FairKeys or 
-    use the LWP::UserAgent::iTMS_Client Perl module when available.
+    If you need to locate your iTMS keys, look for compatible versions of 
+    JHymn or FairKeys, or use the LWP::UserAgent::iTMS_Client Perl module.
 
 =head1 AUTHOR 
 

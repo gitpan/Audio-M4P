@@ -1,5 +1,11 @@
 TODO list for Perl modules under Audio::M4P
-    - the local key retrival needs to work on all platforms
     - MP4 audiovisual movie analysis and markup needs testing
+    - We need a fuller suite of tests. Since this might require a real iTMS 
+      file to be distributed with the app, this may need to wait a while.
+    - an Encode.pm module, to create M4p from unencrypted content
+    
+    
+    
+       
     
 

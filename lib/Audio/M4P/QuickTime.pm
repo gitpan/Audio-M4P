@@ -5,11 +5,13 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.09';
+$VERSION = '0.11';
 
 use Audio::M4P::Atom;
 
-my %meta_info_types = (
+#-------------- useful hashes -------------------------------#
+
+our %meta_info_types = (
     aaid     => 1, # album artist
     '©alb'	 => 1, # album
     akid     => 1, # ? alternate id ?
@@ -36,20 +38,26 @@ my %meta_info_types = (
     '----'   => 1, # itunes specific info
 );
 
-my %tag_types = (
-         AAID    => 'aaid', ALBUM => '@alb', ARTIST => '@art', 
-         COMMENT => '@cmt', COM   => '@com',   CPIL => 'cpil', 
-         CPRT    => 'cprt', YEAR  => '@day', DISK   => 'disk', 
-         GENRE   => 'gnre', GRP   => '@grp', NAM    => '@nam', 
-         RTNG    => 'rtng', TMPO  => 'tmpo', TOO    => '@too',   
-         TRKN    => 'TRKN', WRT   => '@wrt',  
+our %tag_types = (
+         AAID    => 'aaid', ALBUM => '©alb', ARTIST => '©art', 
+         COMMENT => '©cmt', COM   => '©com',   CPIL => 'cpil', 
+         CPRT    => 'cprt', YEAR  => '©day', DISK   => 'disk', 
+         GENRE   => 'gnre', GRP   => '©grp', NAM    => '©nam', 
+         RTNG    => 'rtng', TMPO  => 'tmpo', TOO    => '©too',   
+         TRKN    => 'TRKN', WRT   => '©wrt',  
 );
 
-my @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- ); 
+our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- ); 
 
-sub isMetaDataType {
-    return $meta_info_types{shift};
-}
+our %iTMS_dict_meta_types = ( 
+    copyright => 'cprt', comments => '©cmt', songName => '©nam', 
+    genre => 'gnre', playlistArtistName => '©art', genreID => '©gen', 
+    composerName => '©wrt', playlistName => '©alb', year => '©day',
+    trackNumber => 'trkn', trackCount => 'trkn', discNumber => 'disk', 
+    discCount => 'disk', artworkURL => 'covr',
+);
+
+#------------------- object methods ---------------------------------#
 
 sub new {
     my($class, %args) = @_;
@@ -231,7 +239,7 @@ sub GetSampleTable {
     my $sampleCount = unpack 'N', substr($self->{buffer}, $stsz->start + 16, 4);
     my @samples = unpack 'N*', 
       substr($self->{buffer}, $stsz->start + 20, $sampleCount * 4);
-    print "$sampleCount samples.\n" if $self->{DEBUG};
+    print "There are $sampleCount samples in stsz atom.\n" if $self->{DEBUG};
     return \@samples;
 }
 
@@ -245,9 +253,11 @@ sub GetMetaInfo {
     my($self) = @_;
     my %meta_tags;
     while( my($meta_tag, $type) = each %tag_types ) {
+        $type =~ s/\W//g;
         my $atm = $self->FindAtom($type) or next;
-        my $data_atom = $atm->Contained('data') or next;
-        $self->{MP4Info}->{$meta_tag} = $data_atom->data;
+        my $data_atom = $atm->Contained('data');
+        next unless defined $data_atom;
+        $self->{MP4Info}->{$meta_tag} = substr($data_atom->data, 8);
     }
     return $self->{MP4Info};
 }
@@ -301,6 +311,58 @@ sub SetMetaInfo {
     $self->FixStco($diff);
 }
 
+sub iTMS_MetaInfo {
+    my($self, $dict) = @_;
+    my($key, $type, %info);
+    if($dict) {
+        while ( ($key, $type) = each %iTMS_dict_meta_types ) {
+            next if $key =~ /Count$/;
+            next unless exists $dict->{$key};
+            my $data = $dict->{$key};
+            if($key eq 'discNumber') {
+                my $count = $dict->{discCount} or next;
+                $data = pack "nnn", 0, $data, $count;
+            }
+            if($key eq 'trackNumber') {
+                my $count = $dict->{trackCount} or next;
+                $data = pack "nnn", 0, $data, $count;
+            }
+            if($key eq 'artworkURL') {
+                eval 'require LWP::Simple; $data = get($data)';
+            }
+            if($key eq 'copyright') {
+                $data = "\xE2\x84\x97 " . $data;
+            }
+            $self->SetMetaInfo($type, $data, 1);
+        }
+    }
+    while ( ($key, $type) = each %iTMS_dict_meta_types ) {
+        my $meta = $self->FindAtom($type) or next;
+        my $data = substr($meta->data, 16);
+        if($type eq 'trkn') { 
+            (undef, $info{trackNumber}, $info{trackCount}) = 
+              unpack "nnn", $data;
+        }
+        elsif($type eq 'disk') {
+            (undef, $info{diskNumber}, $info{discCount}) = 
+              unpack "nnn", $data;
+        }
+        elsif($type eq 'cprt') {
+            (undef, $info{'copyright'}) = split(/\s+/, $data, 2);
+        }
+        else {
+            $info{$key} = $data;
+        }
+    }
+    return \%info;
+}
+
+#-------------- non-self helper functions --------------------------#
+
+sub isMetaDataType {
+    return $meta_info_types{shift};
+}
+
 =head1 NAME
 
 Audio::M4P::QuickTime -- Perl module for m4p/mp4/m4a Quicktime audio files
@@ -315,11 +377,11 @@ the file. As a happy side effect of these changes, this module, part of the
 Audio::M4P distribution, now allows extraction and modification of meta 
 information in such files, similar to the MP3::Info and MP4::Info modules.
 
-About QuickTime File Structure and Atoms
+=head2 About QuickTime File Structure and Atoms
 
-Quicktime (MP4) files are arranged as a stream of 'atoms', each containing 
-a header consisting of size and type information followedby data. The data 
-may contain other Quicktime atoms. iTMS (M4P) music files are Quicktime 
+M4P is a QuickTime protected audio file format. It is composed of a linear
+stream of bytes which are segmented into units called atoms. Some atoms
+may be containers for other atoms. iTMS (M4P) music files are Quicktime 
 audio files which are encrypted using a combination of information in the 
 file's drms atom and information which is commonly stored on the computer 
 or audio player. 
@@ -358,7 +420,7 @@ or audio player.
 
 Create a new Audio::M4P::QuickTime object. DEBUG => 1 as argument causes 
 parse and other information to be printed to stdout during processing. 
-DEBUG => 2, DEBUGDUNMPFILE => "file" causes an HTML tree representation 
+DEBUG => 2, DEBUGDUMPFILE => "file" causes an HTML tree representation 
 of the QuickTime file to be emitted to the file given as value to the 
 argument pair. file => "filename.m4p" causes the named QuickTime file to 
 be read and parsed during object initialization.
@@ -371,7 +433,7 @@ Read the named file into the QuickTime object buffer.
 
 =item B<ParseBuffer>
 
- $qt->ParseBufffer;
+ $qt->ParseBuffer;
 
 Parse the file that has been read as a QuickTime stream.
 
@@ -385,7 +447,7 @@ Write the (possibly modified) file back to the output file argument.
 
  my $hashref = $qt->GetMetaInfo;
  while(my($tag, $value) = each %{$hashref}) { 
-    print "$tage => $value\n";
+    print "$tag => $value\n";
  }
 
 Returns a hash reference to meta tag information. Attempts to be compatible 
@@ -400,7 +462,7 @@ reference.
 
  my $hashref = $qt->GetMP4Info;
  while(my($tag, $value) = each %{$hashref}) { 
-    print "$tage => $value\n";
+    print "$tag => $value\n";
  }
 
 Returns a hash reference to MP3 tag audio information. Attempts to be compatible 
@@ -419,6 +481,19 @@ that the program should replace all instances of meta data of this type with
 the new entry, rather than adding the tag to the existing meta data. The fourth 
 argument, if given and true, indicated a tag value before which the new tag is
 to be placed in the file.
+
+=item <iTMS_MetaInfo>
+
+ my $hashref = $qt->iTMS_MetaInfo;
+ 
+ $hashref->{comments} = "A new comment";
+ $qt->iTMS_MetaInfo($hashref);
+ 
+Get or set a meta information field via a hash reference to an Apple iTMS
+type dict data structure. Possible fields are copyright, comments, 
+songName, genre, playlistArtistName, genreID, composerName, playlistName,
+year, trackNumber, trackCount, discNumber, discCount, and artworkURL. iTMS 
+meta data entries may not be compatible with MP3::Info type meta data.
 
 =back
 
@@ -439,6 +514,17 @@ may need to lock down all method calls with a semaphore or other
 serialization method.
 
 =back
+
+
+=head2 SEE ALSO WITH THIS MODULE
+    
+=item L<Audio::M4P>, L<Audio::M4P::Atom>, L<Audio::M4PDecrypt>
+
+=item L<LWP::UserAgent::iTMS_Client>
+    
+=head2 SEE ALSO
+    
+=item L<MP3::Info>, L<MP4::Info>, L<Mac::iTunes>, L<Net::iTMS>, L<LWP::UserAgent::iTMS_Client>
 
 =head1 AUTHOR 
 

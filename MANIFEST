@@ -9,5 +9,7 @@ lib/Audio/M4P/QuickTime.pm
 lib/Audio/M4P/Atom.pm
 bin/M4pDecrypt.PL
 t/01_test.t
+t/elise.m4a
 Makefile.PL
-META.yml
+
+META.yml                                 Module meta-data (added by MakeMaker)
