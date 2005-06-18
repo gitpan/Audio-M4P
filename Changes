@@ -38,7 +38,8 @@ Revision history for Perl modules under Audio::M4P
     - added meta info compatibility function for iTMS XML data sent with 
       itms:// url's (the iTMS_MetaInfo method)
 
-
-
+0.12 Mon May 30 2005
+    - added resize support for atoms > 4 gigs in size
+    - changed GetMetaInfo method to support return of text info
 
     

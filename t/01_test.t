@@ -1,6 +1,6 @@
 # t/01_test.t - check module loading, etc
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 BEGIN { use_ok( 'Audio::M4P::Decrypt' ); }
 
@@ -36,5 +36,10 @@ isa_ok ($qt, 'Audio::M4P::QuickTime');
 
 my %h = %{$qt->iTMS_MetaInfo};
 
-ok(index($h{composerName},'Mark Twain') >= 0); 
-ok(index($h{copyright},'Possessive R') >= 0); 
+ok(index($h{composerName},'Mark Twain') >= 0, "Composer change"); 
+ok(index($h{copyright},'Possessive R') >= 0, "Copyright change"); 
+
+%h = %{$qt->GetMetaInfo(1)};
+ok($h{DISK} =~ /.+1.+1/, "Meta as text");
+ok($h{CPRT} =~ /2005/, "Meta copyright");
+

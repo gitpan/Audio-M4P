@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 use Audio::M4P::Atom;
 
@@ -40,11 +40,11 @@ our %meta_info_types = (
 
 our %tag_types = (
          AAID    => 'aaid', ALBUM => '©alb', ARTIST => '©art', 
-         COMMENT => '©cmt', COM   => '©com',   CPIL => 'cpil', 
+         COMMENT => '©cmt', COM   => '©com', CPIL => 'cpil', 
          CPRT    => 'cprt', YEAR  => '©day', DISK   => 'disk', 
          GENRE   => 'gnre', GRP   => '©grp', NAM    => '©nam', 
          RTNG    => 'rtng', TMPO  => 'tmpo', TOO    => '©too',   
-         TRKN    => 'TRKN', WRT   => '©wrt',  
+         TRKN    => 'trkn', WRT   => '©wrt',  
 );
 
 our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- ); 
@@ -250,14 +250,36 @@ sub DeleteAtom {
 }
 
 sub GetMetaInfo {
-    my($self) = @_;
+    my($self, $as_text) = @_;
     my %meta_tags;
     while( my($meta_tag, $type) = each %tag_types ) {
         $type =~ s/\W//g;
         my $atm = $self->FindAtom($type) or next;
-        my $data_atom = $atm->Contained('data');
-        next unless defined $data_atom;
-        $self->{MP4Info}->{$meta_tag} = substr($data_atom->data, 8);
+        my $data = substr($atm->data, 8);
+        my $firstchar = unpack('C', $data);
+        $data = substr($data, 8) unless $firstchar > 0;
+        $self->{MP4Info}->{$meta_tag} = $data;
+    }
+    if($as_text) {
+        # if as_text, we need to convert the tags to text
+        my $itms_meta = $self->iTMS_MetaInfo();
+        if(defined $self->{MP4Info}->{DISK}) {
+            (undef, my $disknum, my $disks) = 
+              unpack 'nnn', $self->{MP4Info}->{DISK};
+            $self->{MP4Info}->{DISK} = "Disk $disknum of $disks";
+        }
+        if(defined $self->{MP4Info}->{TRKN}) {
+            (undef, my $tracknum, my $tracks) = 
+              unpack 'nnn', $self->{MP4Info}->{TRKN};
+            $self->{MP4Info}->{TRKN} = "Track $tracknum of $tracks";
+        }
+        if(defined $self->{MP4Info}->{TMPO}) {
+            my $tempo = unpack 'n', $self->{MP4Info}->{TMPO};
+            $self->{MP4Info}->{TMPO} = $tempo || "Undefined";
+        }
+        if(defined $self->{MP4Info}->{CPRT}) {
+            $self->{MP4Info}->{CPRT} = substr($self->{MP4Info}->{CPRT}, 3);
+        }
     }
     return $self->{MP4Info};
 }
@@ -445,7 +467,7 @@ Write the (possibly modified) file back to the output file argument.
 
 =item B<GetMetaInfo>
 
- my $hashref = $qt->GetMetaInfo;
+ my $hashref = $qt->GetMetaInfo(1);
  while(my($tag, $value) = each %{$hashref}) { 
     print "$tag => $value\n";
  }
@@ -456,7 +478,9 @@ AAID, ALBUM, ARTIST, COMMENT, COM, CPIL, CPRT, YEAR, DISK, GENRE, GRP, NAM,
 RTNG, TMPO, TOO, TRKN, and WRT. Note that, due to preservation of compatibility 
 with MP3::Info by returning tag info as a hash reference, duplicate entries of 
 the same tag name, such as multiple comment fields, will not be returned in the hash 
-reference.
+reference. An optional second argument, if 1 or true, should convert some 
+binary fields to text in the tags, for instance 
+ my $hashref = $qt->GetMetaInfo(1);
 
 =item B<GetMP4Info>
 
@@ -467,7 +491,7 @@ reference.
 
 Returns a hash reference to MP3 tag audio information. Attempts to be compatible 
 with tag information formats in MP3::Info and MP4::Info. Potential tags are 
-LAYER (1), VERSION (4), SIZE, SECONDS, SS, MM, and BITRATE.
+LAYER (1), VERSION (4), SIZE, SECONDS, SS, MM, and BITRATE. 
 
 =item B<SetMetaInfo>
 
@@ -482,7 +506,7 @@ the new entry, rather than adding the tag to the existing meta data. The fourth
 argument, if given and true, indicated a tag value before which the new tag is
 to be placed in the file.
 
-=item <iTMS_MetaInfo>
+=item B<iTMS_MetaInfo>
 
  my $hashref = $qt->iTMS_MetaInfo;
  
@@ -500,13 +524,6 @@ meta data entries may not be compatible with MP3::Info type meta data.
 =head1 BUGS
 
 =over 4
-
-There ought to be a DWIM way to set iTunes M4P compatible metadata without 
-pack() gymnastics.
-
-No support in Atom.pm currently for resizing of single atoms over 
-4294967296 bytes (4.2 gigabytes) in size. This should only occur with 
-large movie files, not with MP4 audio.
 
 The Audio::M4P::* code is not re-entrant, due to recursive changes to 
 containers not being thread-safe. Threaded code using these modules 

@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -91,15 +91,52 @@ sub start {
 sub size {
     my($self, $newsize) = @_;
     if(defined $newsize) {
-        croak "Bad size $newsize in resize of atom" if $newsize < 8;
-        croak "No support for atoms > 2**32 in size" 
-          if $newsize > 2**32 or $self->{size} > 2**32;
+        return $self->BigResize($newsize) 
+          if $newsize >= 2**32 and $self->{size} >= 2**32;
+        return $self->toBigSize($newsize)
+          if $newsize >= 2**32 and $self->{size} < 2**32;
+        return $self->toRegularSize($newsize) 
+          if $self->{size} >= 2**32 and $newsize < 2**32;
         $self->{size} = $newsize;
         substr( ${$self->{rbuf}}, $self->{start}, 4, pack('N', $newsize) );            
     }
     return $self->{size};
 }
 
+sub BigResize {
+    my($self, $newsize) = @_;
+    croak "atom size big, but offest not 16" if $self->{offset} != 16;
+    $self->{size} = $newsize;
+    substr( ${$self->{rbuf}}, $self->{start} + 8, 8, int64toN($newsize) );
+    return $self->{size};
+}
+
+sub toBigSize {
+    my($self, $newsize) = @_;
+    # need to add 2 bytes to the data section and reset containers and starts
+    return unless $self->{offset} == 8 and $newsize >= 2**32;
+    $self->{offset} = 16;
+    $self->{size} = $newsize;
+    substr( ${$self->{rbuf}}, $self->{start}, 4, pack('N', 1) );
+    substr( ${$self->{rbuf}}, $self->{start} + 8, 0, int64toN($newsize) );
+    $self->redoStarts(8);
+    $self->resizeContainers(8) unless $self->{type} eq 'moov';
+    return $self->{size};
+}
+
+sub toRegularSize {
+    my($self, $newsize) = @_;
+    # need to remove 2 bytes from data section and reset containers and starts
+    return unless $self->{offset} == 16 and $newsize < 2**32;
+    $self->{offset} = 8;
+    $self->{size} = $newsize;
+    substr( ${$self->{rbuf}}, $self->{start}, 4, pack('N', $newsize) );
+    substr( ${$self->{rbuf}}, $self->{start} + 8, 8, '' );
+    $self->redoStarts(-8);
+    $self->resizeContainers(-8) unless $self->{type} eq 'moov';
+    return $self->{size};
+}
+    
 sub offset {
     my($self, $o) = @_;
     $self->{offset} = $o if defined($o) and ($o == 8 or $o == 16);
