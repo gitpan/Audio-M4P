@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -13,16 +13,18 @@ use Tree::Simple::View::HTML;
 
 # see http://www.geocities.com/xhelmboyx/quicktime/formats/mp4-layout.txt
 my %container_atom_types = ( 
-'©alb' => 1, '©ART' => 1,   clip => 1, '©cmt' => 1,   covr => 1,   cpil => 1,
-'©day' => 1,   dinf => 1,   disk => 1,   drms => 1,   edts => 1,   ilst => 1, 
-  matt => 1,   mdia => 1,   meta => 1,   minf => 1,   moov => 1, '©nam' => 1, 
-  schi => 1,   sinf => 1,   stbl => 1,   tmpo => 1, '©too' => 1,   trak => 1,
-  trkn => 1,   udta => 1, '©wrt' => 1,
+  aaid   => 1, akid   => 1, '©alb' => 1, apid   => 1, '©art' => 1, atid   => 1,
+  clip   => 1, '©cmt' => 1, '©com' => 1, covr   => 1, cpil   => 1, cprt   => 1,  
+  '©day' => 1, dinf   => 1, disk   => 1, drms   => 1, edts   => 1, geid   => 1, 
+  gnre   => 1, '©grp' => 1, ilst   => 1, matt   => 1, mdia   => 1, meta   => 1,
+  minf   => 1, moov   => 1, '©nam' => 1, plid   => 1, rtng   => 1, schi   => 1,   
+  sinf   => 1, stbl   => 1, tmpo   => 1, '©too' => 1,  trak   => 1, trkn  => 1,   
+  udta   => 1, '©wrt' => 1,   
 );
 
 my %noncontainer_atom_types = (
 ctts => 1,   data => 1, esds => 1, free => 1, frma  => 1,    
-ftyp => 1, '©gen' => 1, gnre => 1, hmhd => 1, iviv => 1, 'key ' => 1,
+ftyp => 1, '©gen' => 1, hmhd => 1, iviv => 1, 'key ' => 1,
 mdat => 1,   mdhd => 1, mp4a => 1, mp4s => 1, mpv4 => 1,   mvhd => 1, name => 1,
 priv => 1,   stco => 1, stsc => 1, stsd => 1, stts => 1,   tkhd => 1, tref => 1,
 user => 1,   vmhd => 1, apid => 1, geid => 1, wide => 1,

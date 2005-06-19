@@ -42,4 +42,7 @@ Revision history for Perl modules under Audio::M4P
     - added resize support for atoms > 4 gigs in size
     - changed GetMetaInfo method to support return of text info
 
-    
+0.13 Sat June 18 2005
+    - revised meta data get/set functions to accept text arguments for data
+      and convert to and from binary form
+    - added some more meta container data types to list of containers

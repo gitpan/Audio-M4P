@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 use Crypt::Rijndael;
 use Digest::MD5;

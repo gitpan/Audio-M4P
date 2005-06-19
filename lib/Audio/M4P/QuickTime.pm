@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 use Audio::M4P::Atom;
 
@@ -255,7 +255,8 @@ sub GetMetaInfo {
     while( my($meta_tag, $type) = each %tag_types ) {
         $type =~ s/\W//g;
         my $atm = $self->FindAtom($type) or next;
-        my $data = substr($atm->data, 8);
+        my $data_atm = $atm->Contained('data') or next;
+        my $data = $data_atm->data;
         my $firstchar = unpack('C', $data);
         $data = substr($data, 8) unless $firstchar > 0;
         $self->{MP4Info}->{$meta_tag} = $data;
@@ -313,7 +314,7 @@ sub GetMP4Info {
 }
 
 sub SetMetaInfo {
-    my($self, $field, $value, $delete_old, $before) = @_;
+    my($self, $field, $value, $delete_old, $before, $as_text) = @_;
     my $type = $tag_types{$field} || lc substr($field, 0, 4);
     my $ilst = $self->FindAtom('ilst') or return;
     my $typ = $type;
@@ -325,6 +326,22 @@ sub SetMetaInfo {
         foreach my $u (@unwanted) { 
             $diff += $u->size; 
             $u->selfDelete; 
+        }
+    }
+    if($as_text) {
+        my %iTMS_meta_atoms = reverse %iTMS_dict_meta_types;
+        if($iTMS_meta_atoms{$type}) {
+            my %h;
+            if( $type eq 'disk' and $value =~ m/(\d+)\D+(\d+)/ ) {
+                $h{discNumber} = $1;
+                $h{discCount}  = $2;
+            }
+            elsif( $type eq 'trkn' and $value =~ m/(\d+)\D+(\d+)/ ) {
+                $h{trackNumber} = $1;
+                $h{trackCount}  = $2;
+            }            
+            else { $h{$iTMS_meta_atoms{$type}} = $value }
+            return $self->iTMS_MetaInfo(\%h);
         }
     }
     $ilst->insertNewMetaData($type, $value, $before);
@@ -504,7 +521,8 @@ Set a meta information field. The third argument, if given and true, indicates
 that the program should replace all instances of meta data of this type with 
 the new entry, rather than adding the tag to the existing meta data. The fourth 
 argument, if given and true, indicated a tag value before which the new tag is
-to be placed in the file.
+to be placed in the file. The fifth argument indicates the values are in text 
+form, ie for meta type 'trkn', value is something like 'Track 5 of 11'.
 
 =item B<iTMS_MetaInfo>
 
