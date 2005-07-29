@@ -46,3 +46,9 @@ Revision history for Perl modules under Audio::M4P
     - revised meta data get/set functions to accept text arguments for data
       and convert to and from binary form
     - added some more meta container data types to list of containers
+    
+0.14 Tue July 19 2005
+    - class internal method changes in Atom.pm to support covr atom handling
+
+0.15 Thu July 28 2005
+    - changed cover artwork meta data additions to follow iTunes usage

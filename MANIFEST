@@ -10,6 +10,7 @@ lib/Audio/M4P/Atom.pm
 bin/M4pDecrypt.PL
 t/01_test.t
 t/elise.m4a
+t/elisepic1.jpg
+t/elisepic2.jpg
 Makefile.PL
-
 META.yml                                 Module meta-data (added by MakeMaker)

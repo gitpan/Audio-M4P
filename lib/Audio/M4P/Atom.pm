@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.13';
+$VERSION = '0.15';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -24,10 +24,10 @@ my %container_atom_types = (
 
 my %noncontainer_atom_types = (
 ctts => 1,   data => 1, esds => 1, free => 1, frma  => 1,    
-ftyp => 1, '©gen' => 1, hmhd => 1, iviv => 1, 'key ' => 1,
-mdat => 1,   mdhd => 1, mp4a => 1, mp4s => 1, mpv4 => 1,   mvhd => 1, name => 1,
+ftyp => 1, '©gen' => 1, hmhd => 1, iviv => 1, 'key ' => 1, mdat => 1,   
+mdhd => 1, mp4a => 1, mp4s => 1, mpv4 => 1,   mvhd => 1, name => 1,
 priv => 1,   stco => 1, stsc => 1, stsd => 1, stts => 1,   tkhd => 1, tref => 1,
-user => 1,   vmhd => 1, apid => 1, geid => 1, wide => 1,
+user => 1,   vmhd => 1, wide => 1,
 );
 
 sub int64toN {
@@ -200,10 +200,10 @@ sub resizeContainers {
 }
 
 sub redoStarts {
-    my($self, $diff) = @_;
+    my($self, $diff, $pivot) = @_;
     foreach my $atom ( @{ $self->getAllRelatives() } ) { 
         $atom->{start} += $diff 
-          if $atom->start >= $self->start + $self->size + $diff;
+          if $atom->{start} >= $pivot and $atom != $self;
     }
 }
 
@@ -211,7 +211,7 @@ sub selfDelete {
     my($self) = @_;
     $self->resizeContainers( -$self->size);
     substr( ${$self->{rbuf}}, $self->start, $self->size, '' );
-    $self->redoStarts( -$self->size);
+    $self->redoStarts(- $self->size, $self->{start});
     my $parent = $self->{parent};
     return unless ref $parent;
     $parent->removeChild($self->node);
@@ -226,13 +226,13 @@ sub insertNew {
     if( $before and ($after_atom = $self->Contained($before)) ) {
         $atom->{start} = $after_atom->{start};
     }
-    else { $atom->{start} = $self->{start} + $self->{size} }
+    else { $atom->{start} = $self->{start} + $self->{size}; }
     $atom->{offset} = 8;
     $atom->{size} = 8 + length $data;
     $atom->{type} = $type;
+    $atom->redoStarts($atom->{size}, $atom->{start});
     my $buf = pack('Na4', $atom->{size}, $type) . $data;
     substr(${$self->{rbuf}}, $atom->{start}, 0, $buf);
-    $self->redoStarts($atom->{size});
     $self->size($self->{size} + $atom->{size});
     $self->resizeContainers($atom->{size});
     return $atom;
@@ -242,8 +242,15 @@ sub insertNewMetaData {
     my($self, $type, $data, $before) = @_;
     my $wrapper = $self->insertNew($type, '', $before);
     my $flag = ($type =~ /gnre|disk|trkn/) ? 0 : 
-      ($type =~ /rtng/) ? 21 : 1;
+      ($type =~ /rtng/) ? 21 : ($type =~ /covr/) ? 13: 1;
     $wrapper->insertNew('data', pack('NN', $flag, 0) . $data);
+}
+
+sub addMoreArtwork {
+    # add more artwork to a covr atom contained in self
+    my($self, $data) = @_;
+    my $covr = $self->Contained('covr') or croak "No covr atom in this atom";
+    $covr->insertNew('data', pack('NN', 13, 0) . $data);
 }
 
 sub Container {

@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.13';
+$VERSION = '0.15';
 
 use Audio::M4P::Atom;
 
@@ -126,6 +126,10 @@ sub ParseMP4Container {
         elsif($atom->isContainer()) {
             $self->ParseMP4Container($atom->node, 
               $posit + $atom->offset, $posit + $atom->size - $atom->offset);
+        }
+        else { 
+            print("done with noncontainer atom of atom of type ", 
+              $atom->type, "\n") if $self->{DEBUG};
         }
         $posit += $atom->size;
     }
@@ -333,20 +337,26 @@ sub SetMetaInfo {
         if($iTMS_meta_atoms{$type}) {
             my %h;
             if( $type eq 'disk' and $value =~ m/(\d+)\D+(\d+)/ ) {
-                $h{discNumber} = $1;
-                $h{discCount}  = $2;
+            $h{discNumber} = $1;
+            $h{discCount}  = $2;
             }
             elsif( $type eq 'trkn' and $value =~ m/(\d+)\D+(\d+)/ ) {
                 $h{trackNumber} = $1;
                 $h{trackCount}  = $2;
-            }            
+            }     
             else { $h{$iTMS_meta_atoms{$type}} = $value }
             return $self->iTMS_MetaInfo(\%h);
         }
     }
-    $ilst->insertNewMetaData($type, $value, $before);
+    if($typ eq 'covr' and $ilst->Contained($typ)) { 
+        $ilst->addMoreArtwork($value);
+        $diff -= 16;
+    }
+    else { 
+        $ilst->insertNewMetaData($type, $value, $before);
+        $diff -= 24;
+    }
     $diff -= length $value;
-    $diff -= 24;
     $self->FixStco($diff);
 }
 
@@ -372,7 +382,7 @@ sub iTMS_MetaInfo {
             if($key eq 'copyright') {
                 $data = "\xE2\x84\x97 " . $data;
             }
-            $self->SetMetaInfo($type, $data, 1);
+            $self->SetMetaInfo($type, $data, 1, undef, undef);
         }
     }
     while ( ($key, $type) = each %iTMS_dict_meta_types ) {
@@ -389,9 +399,7 @@ sub iTMS_MetaInfo {
         elsif($type eq 'cprt') {
             (undef, $info{'copyright'}) = split(/\s+/, $data, 2);
         }
-        else {
-            $info{$key} = $data;
-        }
+        else { $info{$key} = $data }
     }
     return \%info;
 }
