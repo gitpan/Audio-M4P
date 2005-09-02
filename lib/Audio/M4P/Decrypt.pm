@@ -5,26 +5,27 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.15';
+$VERSION = '0.16';
 
 use Crypt::Rijndael;
 use Digest::MD5;
 use Audio::M4P::QuickTime;
 
 sub new {
-    my($class, %args) = @_;
+    my ( $class, %args ) = @_;
     my $self = {};
-    bless($self, $class);
+    bless( $self, $class );
     $self->{meta} = {};
-    foreach my $k (qw( strHome sPfix dirSep DEBUG DEBUGDUMPFILE )) 
-      { $self->{$k} = $args{$k} if $args{$k} }
-    unless($self->{strHome}) {
-        if($ENV{APPDATA}) { $self->{strHome} = $ENV{APPDATA} }
-        elsif($ENV{HOME}) { $self->{strHome} = $ENV{HOME} }
+    foreach my $k (qw( strHome sPfix dirSep DEBUG DEBUGDUMPFILE )) {
+        $self->{$k} = $args{$k} if $args{$k};
+    }
+    unless ( $self->{strHome} ) {
+        if    ( $ENV{APPDATA} ) { $self->{strHome} = $ENV{APPDATA} }
+        elsif ( $ENV{HOME} )    { $self->{strHome} = $ENV{HOME} }
         else { $self->{strHome} = '~' }
     }
-    unless($self->{sPfix}) {
-        if($^O =~ /Win/) { $self->{sPfix} = '' }
+    unless ( $self->{sPfix} ) {
+        if ( $^O =~ /Win/ ) { $self->{sPfix} = '' }
         else { $self->{sPfix} = '.' }
     }
     $self->{dirSep} ||= '/';
@@ -34,47 +35,52 @@ sub new {
 }
 
 sub GetUserKey {
-    my($self, $userID, $keyID) = @_;
-    my ($userKey, $keyFile, $fh);
+    my ( $self, $userID, $keyID ) = @_;
+    my ( $userKey, $keyFile, $fh );
+
     # default userkey if atoms are 0 is tr1-th3n.y00_by3
-    return "tr1-th3n.y00_by3" unless $userID && $keyID; 
-    $keyFile = sprintf("%s%s%sdrms%s%08X.%03d", $self->{strHome}, 
-      $self->{dirSep}, $self->{sPfix}, $self->{dirSep}, $userID, $keyID);
-    open($fh, '<', $keyFile) or croak "Cannot open file $keyFile: $!";
+    return "tr1-th3n.y00_by3" unless $userID && $keyID;
+    $keyFile = sprintf( "%s%s%sdrms%s%08X.%03d",
+        $self->{strHome}, $self->{dirSep}, $self->{sPfix}, $self->{dirSep},
+        $userID, $keyID );
+    open( $fh, '<', $keyFile ) or croak "Cannot open file $keyFile: $!";
     binmode $fh;
     print "Keyfile $keyFile\n" if $self->{DEBUG};
-    read($fh, $userKey, -s $keyFile) or croak "Cannot read user keyfile: $!";
+    read( $fh, $userKey, -s $keyFile ) or croak "Cannot read user keyfile: $!";
     return $userKey;
 }
 
 sub Decrypt {
-    my($self, $cipherText, $offset, $count, $alg) = @_;
-    my $len = int($count / 16) * 16;
-    substr( $$cipherText, $offset, $len, 
-      $alg->decrypt(substr($$cipherText, $offset, $len)) );
+    my ( $self, $cipherText, $offset, $count, $alg ) = @_;
+    my $len = int( $count / 16 ) * 16;
+    substr( $$cipherText, $offset, $len,
+        $alg->decrypt( substr( $$cipherText, $offset, $len ) ) );
 }
 
 sub DeDRMS {
-    my ($self, $infile, $outfile) = @_;
+    my ( $self, $infile, $outfile ) = @_;
     $self->{QTStream}->ReadFile($infile);
     $self->{QTStream}->ParseBuffer();
     my $sampleTable = $self->{QTStream}->GetSampleTable();
-    my $userKey = $self->GetUserKey( $self->{QTStream}->{userID}, 
-      $self->{QTStream}->{keyID} );
+    my $userKey     = $self->GetUserKey( $self->{QTStream}->{userID},
+        $self->{QTStream}->{keyID} );
     my $md5 = new Digest::MD5;
-    $md5->add($self->{QTStream}->{name}, $self->{QTStream}->{iviv});
-    my $alg = new Crypt::Rijndael($userKey, Crypt::Rijndael::MODE_CBC);
-    $alg->set_iv($md5->digest);
-    $self->Decrypt(\$self->{QTStream}->{priv}, 0, 
-      length($self->{QTStream}->{priv}), $alg);
-    $self->{QTStream}->{priv} =~ /^itun/ or croak "Priv decryption failed."; 
-    my $key = substr($self->{QTStream}->{priv}, 24, 16);
-    $alg = new Crypt::Rijndael($key, Crypt::Rijndael::MODE_CBC);
-    $alg->set_iv( substr($self->{QTStream}->{priv}, 48, 16) );
+    $md5->add( $self->{QTStream}->{name}, $self->{QTStream}->{iviv} );
+    my $alg = new Crypt::Rijndael( $userKey, Crypt::Rijndael::MODE_CBC );
+    $alg->set_iv( $md5->digest );
+    $self->Decrypt(
+        \$self->{QTStream}->{priv},          0,
+        length( $self->{QTStream}->{priv} ), $alg
+    );
+    $self->{QTStream}->{priv} =~ /^itun/ or croak "Priv decryption failed.";
+    my $key = substr( $self->{QTStream}->{priv}, 24, 16 );
+    $alg = new Crypt::Rijndael( $key, Crypt::Rijndael::MODE_CBC );
+    $alg->set_iv( substr( $self->{QTStream}->{priv}, 48, 16 ) );
     my $mdata = $self->{QTStream}->FindAtom('mdat');
     my $posit = $mdata->start + 8;
-    foreach my $samplesize (@{$sampleTable}) {
-        $self->Decrypt($mdata->rbuf, $posit, $samplesize, $alg);
+
+    foreach my $samplesize ( @{$sampleTable} ) {
+        $self->Decrypt( $mdata->rbuf, $posit, $samplesize, $alg );
         $posit += $samplesize;
     }
     $self->{QTStream}->ConvertDrmsToMp4a();
@@ -181,4 +187,3 @@ it under the same terms as Perl itself.
 =cut
 
 1;
-
