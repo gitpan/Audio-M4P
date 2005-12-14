@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.16';
+$VERSION = '0.17';
 
 use Audio::M4P::Atom;
 
@@ -16,7 +16,7 @@ our %meta_info_types = (
     '©alb' => 1,    # album
     akid   => 1,    # ? alternate id ?
     apid   => 1,    # apple id
-    '©art' => 1,    # artist (performing)
+    '©ART' => 1,    # artist (performing)
     atid   => 1,    # apple itunes id ?
     '©cmt' => 1,    # comment field
     '©com' => 1,    # composer
@@ -31,6 +31,7 @@ our %meta_info_types = (
     '©nam' => 1,    # title of track
     plid   => 1,    # purchase id ?
     rtng   => 1,    # rating (integer)
+    stik   => 1,    # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show
     tmpo   => 1,    # tempo (beats per minute)
     '©too' => 1,    # encoder
     trkn   => 1,    # two fields: [field 1] track num. of [field 2] total tracks
@@ -41,7 +42,7 @@ our %meta_info_types = (
 our %tag_types = (
     AAID    => 'aaid',
     ALBUM   => '©alb',
-    ARTIST  => '©art',
+    ARTIST  => '©ART',
     COMMENT => '©cmt',
     COM     => '©com',
     CPIL    => 'cpil',
@@ -56,6 +57,9 @@ our %tag_types = (
     TOO     => '©too',
     TRKN    => 'trkn',
     WRT     => '©wrt',
+    COVR    => 'covr',
+    LYRICS  => '©lyr', 
+    GENRE_  => '©gen',
 );
 
 our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- );
@@ -76,6 +80,40 @@ our %iTMS_dict_meta_types = (
     discCount          => 'disk',
     artworkURL         => 'covr',
 );
+
+my @genre_strings = (
+"Blues", "Classic Rock", "Country", "Dance", "Disco",
+"Funk", "Grunge", "Hip-Hop", "Jazz", "Metal",
+"New Age", "Oldies", "Other", "Pop", "R&B",
+"Rap", "Reggae", "Rock", "Techno", "Industrial",
+"Alternative", "Ska", "Death Metal", "Pranks", "Soundtrack",
+"Euro-Techno", "Ambient", "Trip-Hop", "Vocal", "Jazz+Funk",
+"Fusion", "Trance", "Classical", "Instrumental", "Acid",
+"House", "Game", "Sound Clip", "Gospel", "Noise",
+"AlternRock", "Bass", "Soul", "Punk", "Space", 
+"Meditative", "Instrumental Pop", "Instrumental Rock", "Ethnic",
+"Gothic", "Darkwave", "Techno-Industrial", "Electronic", "Pop-Folk",
+"Eurodance", "Dream", "Southern Rock", "Comedy", "Cult",
+"Gangsta", "Top 40", "Christian Rap", "Pop/Funk", "Jungle",
+"Native American", "Cabaret", "New Wave", "Psychadelic", "Rave",
+"Showtunes", "Trailer", "Lo-Fi", "Tribal", "Acid Punk",
+"Acid Jazz", "Polka", "Retro", "Musical", "Rock & Roll",
+"Hard Rock", "Folk", "Folk/Rock", "National Folk", "Swing",
+"Fast-Fusion", "Bebob", "Latin", "Revival", "Celtic",
+"Bluegrass", "Avantgarde", "Gothic Rock", "Progressive Rock", 
+"Psychedelic Rock", "Symphonic Rock", "Slow Rock", "Big Band", "Chorus", 
+"Easy Listening", "Acoustic", "Humour", "Speech", "Chanson", "Opera",
+"Chamber Music", "Sonata", "Symphony", "Booty Bass", "Primus",
+"Porn Groove", "Satire", "Slow Jam", "Club", "Tango",
+"Samba", "Folklore", "Ballad", "Power Ballad", "Rhythmic Soul",
+"Freestyle", "Duet", "Punk Rock", "Drum Solo", "A capella",
+"Euro-House", "Dance Hall", "Goa", "Drum & Bass", "Club House",
+"Hardcore", "Terror", "Indie", "BritPop", "NegerPunk",
+"Polsk Punk", "Beat", "Christian Gangsta", "Heavy Metal", "Black Metal",
+"Crossover", "Contemporary C", "Christian Rock", "Merengue", "Salsa",
+"Thrash Metal", "Anime", "JPop", "SynthPop",
+);
+
 
 #------------------- object methods ---------------------------------#
 
@@ -335,6 +373,20 @@ sub GetMetaInfo {
         if ( defined $self->{MP4Info}->{CPRT} ) {
             $self->{MP4Info}->{CPRT} = substr( $self->{MP4Info}->{CPRT}, 3 );
         }
+        if(defined $self->{MP4Info}->{COVR}) {
+	    	$self->{MP4Info}->{COVR} = "Coverart present";
+       	}
+        if(defined $self->{MP4Info}->{GENRE}) {
+            my $genre_string = unpack 'nnn', $self->{MP4Info}->{GENRE};
+                if ($genre_string < 128 ) {
+                    #$genre_string = $genre_strings[$genre_string]; 
+                    #$genre_string = $genre_strings[$genre_string-1];
+                    $self->{MP4Info}->{GENRE} = $genre_strings[$genre_string-1];
+                }
+            else {
+            	$self->{MP4Info}->{GENRE} = $self->{MP4Info}->{GENRE};
+            }
+        }        
     }
     return $self->{MP4Info};
 }
@@ -455,6 +507,18 @@ sub iTMS_MetaInfo {
     return \%info;
 }
 
+# Get cover art--returns a reference to an array of cover artwork
+sub GetCoverArt {
+    my($self) = @_;
+    my @covr = $self->FindAtom('covr') or return;
+    my @artwork;
+    foreach my $atm (@covr) {
+        my $data_atm = $atm->Contained('data') or next;
+        push @artwork, substr($data_atm->data, 8);
+    }
+    return \@artwork;
+}
+
 #-------------- non-self helper functions --------------------------#
 
 sub isMetaDataType {
@@ -467,22 +531,18 @@ Audio::M4P::QuickTime -- Perl module for m4p/mp4/m4a Quicktime audio files
 
 =head1 DESCRIPTION
 
-In late 2004 an update to iTunes made that program incompatible with decrypted 
-files still containing meta information identifying the content as having been 
-purchased via iTMS. This forced an update to the module Audio::M4pDecrypt 
-(now renamed Audio::M4P::Decrypt), which now strips such meta information from 
-the file. As a happy side effect of these changes, this module, part of the 
-Audio::M4P distribution, now allows extraction and modification of meta 
-information in such files, similar to the MP3::Info and MP4::Info modules.
+Perl manipulation of Quicktime Audio files, including protected audio M4P 
+files. Allows extraction and modification of meta information in Apple 
+QuickTime AAC/m4a music files.
 
 =head2 About QuickTime File Structure and Atoms
 
 M4P is a QuickTime protected audio file format. It is composed of a linear
-stream of bytes which are segmented into units called atoms. Some atoms
-may be containers for other atoms. iTMS (M4P) music files are Quicktime 
-audio files which are encrypted using a combination of information in the 
-file's drms atom and information which is commonly stored on the computer 
-or audio player. 
+stream of bytes which are segmented into units called atoms. Some atoms 
+may be containers for other atoms. iTunes Music Store M4P music files are 
+Quicktime audio files which are encrypted using a combination of information 
+in the file's drms atom and information which is commonly stored on the 
+computer or audio player. 
     
 
 =head1 SYNOPSIS
@@ -595,6 +655,17 @@ type dict data structure. Possible fields are copyright, comments,
 songName, genre, playlistArtistName, genreID, composerName, playlistName,
 year, trackNumber, trackCount, discNumber, discCount, and artworkURL. iTMS 
 meta data entries may not be compatible with MP3::Info type meta data.
+
+=item B<GetCoverArt>
+
+  my $artwork = $qt->GetCoverArt();
+  foreach my $pic (@{$artwork}) { 
+      # do stuff with art
+  }
+  
+Returns a reference to an array of cover artwork. Note: the artwork routines
+were suggested and largely contributed by pucklock. (Thanks!)
+
 
 =back
 

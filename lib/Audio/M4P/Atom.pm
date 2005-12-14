@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.16';
+$VERSION = '0.17';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -45,6 +45,7 @@ my %container_atom_types = (
     schi   => 1,
     sinf   => 1,
     stbl   => 1,
+    stik   => 1,
     tmpo   => 1,
     '©too' => 1,
     trak   => 1,
@@ -164,7 +165,7 @@ sub size {
 
 sub BigResize {
     my ( $self, $newsize ) = @_;
-    croak "atom size big, but offest not 16" if $self->{offset} != 16;
+    croak "atom size big, but offset not 16" if $self->{offset} != 16;
     $self->{size} = $newsize;
     substr( ${ $self->{rbuf} }, $self->{start} + 8, 8, int64toN($newsize) );
     return $self->{size};
