@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.17';
+$VERSION = '0.18';
 
 use Audio::M4P::Atom;
 
@@ -91,27 +91,27 @@ my @genre_strings = (
 "Fusion", "Trance", "Classical", "Instrumental", "Acid",
 "House", "Game", "Sound Clip", "Gospel", "Noise",
 "AlternRock", "Bass", "Soul", "Punk", "Space", 
-"Meditative", "Instrumental Pop", "Instrumental Rock", "Ethnic",
-"Gothic", "Darkwave", "Techno-Industrial", "Electronic", "Pop-Folk",
-"Eurodance", "Dream", "Southern Rock", "Comedy", "Cult",
-"Gangsta", "Top 40", "Christian Rap", "Pop/Funk", "Jungle",
-"Native American", "Cabaret", "New Wave", "Psychadelic", "Rave",
-"Showtunes", "Trailer", "Lo-Fi", "Tribal", "Acid Punk",
-"Acid Jazz", "Polka", "Retro", "Musical", "Rock & Roll",
-"Hard Rock", "Folk", "Folk/Rock", "National Folk", "Swing",
-"Fast-Fusion", "Bebob", "Latin", "Revival", "Celtic",
-"Bluegrass", "Avantgarde", "Gothic Rock", "Progressive Rock", 
-"Psychedelic Rock", "Symphonic Rock", "Slow Rock", "Big Band", "Chorus", 
-"Easy Listening", "Acoustic", "Humour", "Speech", "Chanson", "Opera",
-"Chamber Music", "Sonata", "Symphony", "Booty Bass", "Primus",
-"Porn Groove", "Satire", "Slow Jam", "Club", "Tango",
-"Samba", "Folklore", "Ballad", "Power Ballad", "Rhythmic Soul",
-"Freestyle", "Duet", "Punk Rock", "Drum Solo", "A capella",
-"Euro-House", "Dance Hall", "Goa", "Drum & Bass", "Club House",
-"Hardcore", "Terror", "Indie", "BritPop", "NegerPunk",
-"Polsk Punk", "Beat", "Christian Gangsta", "Heavy Metal", "Black Metal",
-"Crossover", "Contemporary C", "Christian Rock", "Merengue", "Salsa",
-"Thrash Metal", "Anime", "JPop", "SynthPop",
+"Meditative", "Instrumental Pop", "Instrumental Rock", "Ethnic", "Gothic", 
+"Darkwave", "Techno-Industrial", "Electronic", "Pop-Folk", "Eurodance", 
+"Dream", "Southern Rock", "Comedy", "Cult", "Gangsta", 
+"Top 40", "Christian Rap", "Pop/Funk", "Jungle", "Native American", 
+"Cabaret", "New Wave", "Psychadelic", "Rave", "Showtunes", 
+"Trailer", "Lo-Fi", "Tribal", "Acid Punk", "Acid Jazz", 
+"Polka", "Retro", "Musical", "Rock & Roll", "Hard Rock", 
+"Folk", "Folk/Rock", "National Folk", "Swing", "Fast-Fusion", 
+"BeBop", "Latin", "Revival", "Celtic", "Bluegrass", 
+"Avantgarde", "Gothic Rock", "Progressive Rock", "Psychedelic Rock", "Symphonic Rock", 
+"Slow Rock", "Big Band", "Chorus", "Easy Listening", "Acoustic", 
+"Humour", "Speech", "Chanson", "Opera", "Chamber Music", 
+"Sonata", "Symphony", "Booty Bass", "Primus", "Porn Groove", 
+"Satire", "Slow Jam", "Club", "Tango", "Samba", 
+"Folklore", "Ballad", "Power Ballad", "Rhythmic Soul", "Freestyle", 
+"Duet", "Punk Rock", "Drum Solo", "A capella", "Euro-House", 
+"Dance Hall", "Goa", "Drum & Bass", "Club House", "Hardcore", 
+"Terror", "Indie", "BritPop", "NegerPunk", "Polsk Punk", 
+"Beat", "Christian Gangsta", "Heavy Metal", "Black Metal", "Crossover", 
+"Contemporary C", "Christian Rock", "Merengue", "Salsa", "Thrash Metal", 
+"Anime", "JPop", "SynthPop", "INVALID_GENRE"
 );
 
 
@@ -248,6 +248,10 @@ sub ParseMeta {
               substr( $self->{buffer}, $atom->start + $atom->size - 6, 4 );
             $adata = "Track $fld1 of $fld2";
         }
+        elsif ( $type eq 'genre' ) {
+            $adata = unpack 'n',
+              substr( $self->{buffer}, $atom->start + $atom->size - 2, 2 );
+        }
         $self->{meta}->{$type} = $adata unless length $adata > 300;
     }
     print $self->MetaInfo() if $self->{DEBUG};
@@ -348,14 +352,17 @@ sub GetMetaInfo {
         my $atm      = $self->FindAtom($type)  or next;
         my $data_atm = $atm->Contained('data') or next;
         my $data     = $data_atm->data;
-        my $firstchar = unpack( 'C', $data );
-        $data = substr( $data, 8 ) unless $firstchar > 0;
+        if($type eq 'gnre') {
+            (undef, undef, $data) = unpack 'NNn', $data;
+        }
+        else {
+            my $firstchar = unpack( 'C', $data );
+            $data = substr( $data, 8 ) unless $firstchar > 0;
+        }
         $self->{MP4Info}->{$meta_tag} = $data;
     }
     if ($as_text) {
-
         # if as_text, we need to convert the tags to text
-        my $itms_meta = $self->iTMS_MetaInfo();
         if ( defined $self->{MP4Info}->{DISK} ) {
             ( undef, my $disknum, my $disks ) = unpack 'nnn',
               $self->{MP4Info}->{DISK};
@@ -376,17 +383,12 @@ sub GetMetaInfo {
         if(defined $self->{MP4Info}->{COVR}) {
 	    	$self->{MP4Info}->{COVR} = "Coverart present";
        	}
-        if(defined $self->{MP4Info}->{GENRE}) {
-            my $genre_string = unpack 'nnn', $self->{MP4Info}->{GENRE};
-                if ($genre_string < 128 ) {
-                    #$genre_string = $genre_strings[$genre_string]; 
-                    #$genre_string = $genre_strings[$genre_string-1];
-                    $self->{MP4Info}->{GENRE} = $genre_strings[$genre_string-1];
-                }
-            else {
-            	$self->{MP4Info}->{GENRE} = $self->{MP4Info}->{GENRE};
-            }
-        }        
+        if(defined $self->{MP4Info}->{GENRE}
+          and $self->{MP4Info}->{GENRE} =~ /^\d+$/ 
+          and $self->{MP4Info}->{GENRE} < 128) {
+            $self->{MP4Info}->{GENRE} = 
+              $genre_strings[$self->{MP4Info}->{GENRE} - 1];
+        }
     }
     return $self->{MP4Info};
 }
@@ -451,6 +453,7 @@ sub SetMetaInfo {
             return $self->iTMS_MetaInfo( \%h );
         }
     }
+    $value = pack('n', $value) if $typ eq 'genre';
     if ( $typ eq 'covr' and $ilst->Contained($typ) ) {
         $ilst->addMoreArtwork($value);
         $diff -= 16;
@@ -484,6 +487,15 @@ sub iTMS_MetaInfo {
             }
             if ( $key eq 'copyright' ) {
                 $data = "\xE2\x84\x97 " . $data;
+            }
+            if( $key eq 'genre' ) {
+                my $idx = 0;
+                my $gnre = '';
+                foreach $gnre (@genre_strings) {
+                    ++$idx;
+                    last if $gnre eq $data;
+                }
+                $data = pack "n", $idx unless $gnre eq 'INVALID_GENRE';
             }
             $self->SetMetaInfo( $type, $data, 1, undef, undef );
         }

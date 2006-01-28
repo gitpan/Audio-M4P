@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.17';
+$VERSION = '0.18';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;

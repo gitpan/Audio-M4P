@@ -56,3 +56,6 @@ Revision history for Perl modules under Audio::M4P
 0.16 Thu Sep 1 2005
     - some code syntax and spacing cleanup
 
+0.18 Mon Jan 23 2006
+    - fixed genre setting logic
+
