@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.18';
+$VERSION = '0.20';
 
 use Audio::M4P::Atom;
 
@@ -31,7 +31,8 @@ our %meta_info_types = (
     '©nam' => 1,    # title of track
     plid   => 1,    # purchase id ?
     rtng   => 1,    # rating (integer)
-    stik   => 1,    # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show
+    stik   => 1
+    ,  # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show
     tmpo   => 1,    # tempo (beats per minute)
     '©too' => 1,    # encoder
     trkn   => 1,    # two fields: [field 1] track num. of [field 2] total tracks
@@ -40,26 +41,45 @@ our %meta_info_types = (
 );
 
 our %tag_types = (
-    AAID    => 'aaid',
-    ALBUM   => '©alb',
-    ARTIST  => '©ART',
-    COMMENT => '©cmt',
-    COM     => '©com',
-    CPIL    => 'cpil',
-    CPRT    => 'cprt',
-    YEAR    => '©day',
-    DISK    => 'disk',
-    GENRE   => 'gnre',
-    GRP     => '©grp',
-    NAM     => '©nam',
-    RTNG    => 'rtng',
-    TMPO    => 'tmpo',
-    TOO     => '©too',
-    TRKN    => 'trkn',
-    WRT     => '©wrt',
-    COVR    => 'covr',
-    LYRICS  => '©lyr', 
-    GENRE_  => '©gen',
+    AAID     => 'aaid',
+    ALB      => '©alb',
+    ALBUM    => '©alb',
+    ART      => '©ART',
+    ARTIST   => '©ART',
+    CMT      => '©cmt',
+    COMMENT  => '©cmt',
+    COM      => '©com',
+    CPIL     => 'cpil',
+    CPRT     => 'cprt',
+    DAY      => '©day',
+    DISK     => 'disk',
+    GENRE    => 'gnre',
+    GNRE     => 'gnre',
+    GRP      => '©grp',
+    NAM      => '©nam',
+    RTNG     => 'rtng',
+    SONG     => '©nam',
+    TITLE    => '©nam',
+    TMPO     => 'tmpo',
+    TOO      => '©too',
+    TRACKNUM => 'trkn',
+    TRKN     => 'trkn',
+    WRT      => '©wrt',
+    COVR     => 'covr',
+    LYRICS   => '©lyr',
+    GENRE_   => '©gen',
+    YEAR     => '©day',
+);
+
+our %alternate_tag_types = (
+    GENRE   => 'GNRE',
+    NAM     => 'TITLE',
+    ARTIST  => 'ART',
+    ALBUM   => 'ALB',
+    YEAR    => 'DAY',
+    COMMENT => 'CMT',
+    TRKN    => 'TRACKNUM',
+    SONG    => 'TITLE',
 );
 
 our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- );
@@ -81,39 +101,83 @@ our %iTMS_dict_meta_types = (
     artworkURL         => 'covr',
 );
 
-my @genre_strings = (
-"Blues", "Classic Rock", "Country", "Dance", "Disco",
-"Funk", "Grunge", "Hip-Hop", "Jazz", "Metal",
-"New Age", "Oldies", "Other", "Pop", "R&B",
-"Rap", "Reggae", "Rock", "Techno", "Industrial",
-"Alternative", "Ska", "Death Metal", "Pranks", "Soundtrack",
-"Euro-Techno", "Ambient", "Trip-Hop", "Vocal", "Jazz+Funk",
-"Fusion", "Trance", "Classical", "Instrumental", "Acid",
-"House", "Game", "Sound Clip", "Gospel", "Noise",
-"AlternRock", "Bass", "Soul", "Punk", "Space", 
-"Meditative", "Instrumental Pop", "Instrumental Rock", "Ethnic", "Gothic", 
-"Darkwave", "Techno-Industrial", "Electronic", "Pop-Folk", "Eurodance", 
-"Dream", "Southern Rock", "Comedy", "Cult", "Gangsta", 
-"Top 40", "Christian Rap", "Pop/Funk", "Jungle", "Native American", 
-"Cabaret", "New Wave", "Psychadelic", "Rave", "Showtunes", 
-"Trailer", "Lo-Fi", "Tribal", "Acid Punk", "Acid Jazz", 
-"Polka", "Retro", "Musical", "Rock & Roll", "Hard Rock", 
-"Folk", "Folk/Rock", "National Folk", "Swing", "Fast-Fusion", 
-"BeBop", "Latin", "Revival", "Celtic", "Bluegrass", 
-"Avantgarde", "Gothic Rock", "Progressive Rock", "Psychedelic Rock", "Symphonic Rock", 
-"Slow Rock", "Big Band", "Chorus", "Easy Listening", "Acoustic", 
-"Humour", "Speech", "Chanson", "Opera", "Chamber Music", 
-"Sonata", "Symphony", "Booty Bass", "Primus", "Porn Groove", 
-"Satire", "Slow Jam", "Club", "Tango", "Samba", 
-"Folklore", "Ballad", "Power Ballad", "Rhythmic Soul", "Freestyle", 
-"Duet", "Punk Rock", "Drum Solo", "A capella", "Euro-House", 
-"Dance Hall", "Goa", "Drum & Bass", "Club House", "Hardcore", 
-"Terror", "Indie", "BritPop", "NegerPunk", "Polsk Punk", 
-"Beat", "Christian Gangsta", "Heavy Metal", "Black Metal", "Crossover", 
-"Contemporary C", "Christian Rock", "Merengue", "Salsa", "Thrash Metal", 
-"Anime", "JPop", "SynthPop", "INVALID_GENRE"
+our @genre_strings = (
+    "Blues",             "Classic Rock",
+    "Country",           "Dance",
+    "Disco",             "Funk",
+    "Grunge",            "Hip-Hop",
+    "Jazz",              "Metal",
+    "New Age",           "Oldies",
+    "Other",             "Pop",
+    "R&B",               "Rap",
+    "Reggae",            "Rock",
+    "Techno",            "Industrial",
+    "Alternative",       "Ska",
+    "Death Metal",       "Pranks",
+    "Soundtrack",        "Euro-Techno",
+    "Ambient",           "Trip-Hop",
+    "Vocal",             "Jazz+Funk",
+    "Fusion",            "Trance",
+    "Classical",         "Instrumental",
+    "Acid",              "House",
+    "Game",              "Sound Clip",
+    "Gospel",            "Noise",
+    "AlternRock",        "Bass",
+    "Soul",              "Punk",
+    "Space",             "Meditative",
+    "Instrumental Pop",  "Instrumental Rock",
+    "Ethnic",            "Gothic",
+    "Darkwave",          "Techno-Industrial",
+    "Electronic",        "Pop-Folk",
+    "Eurodance",         "Dream",
+    "Southern Rock",     "Comedy",
+    "Cult",              "Gangsta",
+    "Top 40",            "Christian Rap",
+    "Pop/Funk",          "Jungle",
+    "Native American",   "Cabaret",
+    "New Wave",          "Psychadelic",
+    "Rave",              "Showtunes",
+    "Trailer",           "Lo-Fi",
+    "Tribal",            "Acid Punk",
+    "Acid Jazz",         "Polka",
+    "Retro",             "Musical",
+    "Rock & Roll",       "Hard Rock",
+    "Folk",              "Folk/Rock",
+    "National Folk",     "Swing",
+    "Fast-Fusion",       "BeBop",
+    "Latin",             "Revival",
+    "Celtic",            "Bluegrass",
+    "Avantgarde",        "Gothic Rock",
+    "Progressive Rock",  "Psychedelic Rock",
+    "Symphonic Rock",    "Slow Rock",
+    "Big Band",          "Chorus",
+    "Easy Listening",    "Acoustic",
+    "Humour",            "Speech",
+    "Chanson",           "Opera",
+    "Chamber Music",     "Sonata",
+    "Symphony",          "Booty Bass",
+    "Primus",            "Porn Groove",
+    "Satire",            "Slow Jam",
+    "Club",              "Tango",
+    "Samba",             "Folklore",
+    "Ballad",            "Power Ballad",
+    "Rhythmic Soul",     "Freestyle",
+    "Duet",              "Punk Rock",
+    "Drum Solo",         "A capella",
+    "Euro-House",        "Dance Hall",
+    "Goa",               "Drum & Bass",
+    "Club House",        "Hardcore",
+    "Terror",            "Indie",
+    "BritPop",           "NegerPunk",
+    "Polsk Punk",        "Beat",
+    "Christian Gangsta", "Heavy Metal",
+    "Black Metal",       "Crossover",
+    "Contemporary C",    "Christian Rock",
+    "Merengue",          "Salsa",
+    "Thrash Metal",      "Anime",
+    "JPop",              "SynthPop",
+    "INVALID_GENRE"
 );
-
 
 #------------------- object methods ---------------------------------#
 
@@ -314,17 +378,19 @@ sub ConvertDrmsToMp4a {
 
 sub FixStco {
     my ( $self, $sinf_sz ) = @_;
-    my $stco = $self->FindAtom('stco') or croak "No stco atom";
-    my @samples =
-      map { $_ - $sinf_sz }
-      unpack( "N*",
-        substr( $self->{buffer}, $stco->start + 16, $stco->size - 16 ) );
-    substr(
-        $self->{buffer},
-        $stco->start + 16,
-        $stco->size - 16,
-        pack( 'N*', @samples )
-    );
+    my @stco_atoms = $self->FindAtom('stco') or croak "No stco atom";
+    foreach my $stco (@stco_atoms) {
+        my @samples =
+          map { $_ - $sinf_sz }
+          unpack( "N*",
+            substr( $self->{buffer}, $stco->start + 16, $stco->size - 16 ) );
+        substr(
+            $self->{buffer},
+            $stco->start + 16,
+            $stco->size - 16,
+            pack( 'N*', @samples )
+        );
+    }
 }
 
 sub GetSampleTable {
@@ -352,16 +418,25 @@ sub GetMetaInfo {
         my $atm      = $self->FindAtom($type)  or next;
         my $data_atm = $atm->Contained('data') or next;
         my $data     = $data_atm->data;
-        if($type eq 'gnre') {
-            (undef, undef, $data) = unpack 'NNn', $data;
+        if ( $type eq 'gnre' ) {
+            ( undef, undef, $data ) = unpack 'NNn', $data;
+        }
+        elsif ( $type eq 'trkn' ) {
+            ( undef, undef, undef, $data, $self->{MP4Info}->{TRACKCOUNT} ) =
+              unpack 'NNnnn', $data;
         }
         else {
             my $firstchar = unpack( 'C', $data );
             $data = substr( $data, 8 ) unless $firstchar > 0;
         }
         $self->{MP4Info}->{$meta_tag} = $data;
+        while ( my ( $tag, $alt_tag ) = each %alternate_tag_types ) {
+            $self->{MP4Info}->{$alt_tag} = $self->{MP4Info}->{$tag}
+              if defined $self->{MP4Info}->{$tag};
+        }
     }
     if ($as_text) {
+
         # if as_text, we need to convert the tags to text
         if ( defined $self->{MP4Info}->{DISK} ) {
             ( undef, my $disknum, my $disks ) = unpack 'nnn',
@@ -371,7 +446,8 @@ sub GetMetaInfo {
         if ( defined $self->{MP4Info}->{TRKN} ) {
             ( undef, my $tracknum, my $tracks ) = unpack 'nnn',
               $self->{MP4Info}->{TRKN};
-            $self->{MP4Info}->{TRKN} = "Track $tracknum of $tracks";
+            $self->{MP4Info}->{TRKN} = "Track $tracknum of $tracks"
+              if $tracknum && $tracks;
         }
         if ( defined $self->{MP4Info}->{TMPO} ) {
             my $tempo = unpack 'n', $self->{MP4Info}->{TMPO};
@@ -380,14 +456,15 @@ sub GetMetaInfo {
         if ( defined $self->{MP4Info}->{CPRT} ) {
             $self->{MP4Info}->{CPRT} = substr( $self->{MP4Info}->{CPRT}, 3 );
         }
-        if(defined $self->{MP4Info}->{COVR}) {
-	    	$self->{MP4Info}->{COVR} = "Coverart present";
-       	}
-        if(defined $self->{MP4Info}->{GENRE}
-          and $self->{MP4Info}->{GENRE} =~ /^\d+$/ 
-          and $self->{MP4Info}->{GENRE} < 128) {
-            $self->{MP4Info}->{GENRE} = 
-              $genre_strings[$self->{MP4Info}->{GENRE} - 1];
+        if ( defined $self->{MP4Info}->{COVR} ) {
+            $self->{MP4Info}->{COVR} = "Coverart present";
+        }
+        if (    defined $self->{MP4Info}->{GENRE}
+            and $self->{MP4Info}->{GENRE} =~ /^\d+$/
+            and $self->{MP4Info}->{GENRE} < 128 )
+        {
+            $self->{MP4Info}->{GENRE} =
+              $genre_strings[ $self->{MP4Info}->{GENRE} - 1 ];
         }
     }
     return $self->{MP4Info};
@@ -401,6 +478,7 @@ sub GetMP4Info {
     $meta->{COPYRIGHT} = ( exists $meta->{CPRT} ) ? 1 : 0;
     my $mdat = $self->FindAtom('mdat');
     $meta->{SIZE} = $mdat->size || 1;
+    $meta->{ENCRYPTED} = $self->FindAtom('drms');
     my $mvhd_data = $self->FindAtomData('mvhd');
     my ( $timescale, $duration );
 
@@ -424,6 +502,7 @@ sub GetMP4Info {
 
 sub SetMetaInfo {
     my ( $self, $field, $value, $delete_old, $before, $as_text ) = @_;
+    $self->GetMetaInfo;    # fill default fields like TRACKCOUNT
     my $type = $tag_types{$field} || lc substr( $field, 0, 4 );
     my $ilst = $self->FindAtom('ilst') or return;
     my $typ = $type;
@@ -449,11 +528,13 @@ sub SetMetaInfo {
                 $h{trackNumber} = $1;
                 $h{trackCount}  = $2;
             }
+            elsif ( $type eq 'gnre' ) {
+                $value = genre_text_to_genre_num($value);
+            }
             else { $h{ $iTMS_meta_atoms{$type} } = $value }
             return $self->iTMS_MetaInfo( \%h );
         }
     }
-    $value = pack('n', $value) if $typ eq 'genre';
     if ( $typ eq 'covr' and $ilst->Contained($typ) ) {
         $ilst->addMoreArtwork($value);
         $diff -= 16;
@@ -480,7 +561,7 @@ sub iTMS_MetaInfo {
             }
             if ( $key eq 'trackNumber' ) {
                 my $count = $dict->{trackCount} or next;
-                $data = pack "nnn", 0, $data, $count;
+                $data = pack "nnnn", 0, $data, $count, 0;
             }
             if ( $key eq 'artworkURL' ) {
                 eval 'require LWP::Simple; $data = get($data)';
@@ -488,14 +569,9 @@ sub iTMS_MetaInfo {
             if ( $key eq 'copyright' ) {
                 $data = "\xE2\x84\x97 " . $data;
             }
-            if( $key eq 'genre' ) {
-                my $idx = 0;
-                my $gnre = '';
-                foreach $gnre (@genre_strings) {
-                    ++$idx;
-                    last if $gnre eq $data;
-                }
-                $data = pack "n", $idx unless $gnre eq 'INVALID_GENRE';
+            if ( $key eq 'genre' ) {
+                my $gnre = genre_text_to_genre_num($data);
+                $data = pack "n", $gnre unless $gnre eq 'INVALID_GENRE';
             }
             $self->SetMetaInfo( $type, $data, 1, undef, undef );
         }
@@ -521,20 +597,114 @@ sub iTMS_MetaInfo {
 
 # Get cover art--returns a reference to an array of cover artwork
 sub GetCoverArt {
-    my($self) = @_;
+    my ($self) = @_;
     my @covr = $self->FindAtom('covr') or return;
     my @artwork;
     foreach my $atm (@covr) {
         my $data_atm = $atm->Contained('data') or next;
-        push @artwork, substr($data_atm->data, 8);
+        push @artwork, substr( $data_atm->data, 8 );
     }
     return \@artwork;
+}
+
+#-----------------------------------------------------------
+
+# MP3::Tag analogs, but more fields, and allow setting of tags
+
+sub autoinfo {
+    my ($self) = @_;
+    my $tags = $self->GetMetaInfo;
+    return (
+        $tags->{TITLE},   $tags->{TRKN}, $tags->{ARTIST}, $tags->{ALBUM},
+        $tags->{COMMENT}, $tags->{YEAR}, $tags->{GENRE}
+    );
+}
+
+sub title {
+    my ( $self, $new_tag ) = @_;
+    $self->SetMetaInfo( 'TITLE', $new_tag, 1 ) if $new_tag;
+    my $tags = $self->GetMetaInfo;
+    return $tags->{TITLE} || '';
+}
+
+sub comment {
+    my ( $self, $new_tag ) = @_;
+    $self->SetMetaInfo( 'COMMENT', $new_tag, 1 ) if $new_tag;
+    my $tags = $self->GetMetaInfo;
+    return $tags->{COMMENT} || '';
+}
+
+sub year {
+    my ( $self, $new_tag ) = @_;
+    $self->SetMetaInfo( 'YEAR', $new_tag, 1 ) if $new_tag;
+    my $tags = $self->GetMetaInfo;
+    return $tags->{YEAR} || '';
+}
+
+sub genre {
+    my ( $self, $new_tag ) = @_;
+    $self->SetMetaInfo( 'GENRE', pack( "n", $new_tag ), 1 ) if $new_tag;
+    my $tags = $self->GetMetaInfo;
+    return $tags->{GENRE} || '';
+}
+
+sub genre_as_text {
+    my ( $self, $new_tag ) = @_;
+    my ( $i, $genre_num );
+    if ($new_tag) {
+        $self->genre( genre_text_to_genre_num($new_tag) );
+    }
+    return genre_num_to_genre_text( $self->genre );
+}
+
+sub track {
+    my ( $self, $new_trkn ) = @_;
+    my $tags = $self->GetMetaInfo(1);
+    if ($new_trkn) {
+        my $tcount = $tags->{TRACKCOUNT} || 0;
+        $self->SetMetainfo( 'TRKN', "$new_trkn of $tcount", 1, 0, 1 );
+        $tags = $self->GetMetaInfo(1);
+    }
+    return $tags->{TRKN} || '';
+}
+
+sub tracks {
+    my ( $self, $new_trkn, $new_tcount ) = @_;
+    $self->SetMetaInfo( 'TRKN', "$new_trkn of $new_tcount", 1, 0, 1 )
+      if ( $new_trkn and $new_tcount );
+    my $tags   = $self->GetMetaInfo;
+    my $trkn   = $tags->{TRKN};
+    my $tcount = $tags->{TRACKCOUNT};
+    return unless $trkn and $tcount;
+    return ( $trkn, $tcount );
 }
 
 #-------------- non-self helper functions --------------------------#
 
 sub isMetaDataType {
     return $meta_info_types{shift};
+}
+
+sub genre_text_to_genre_num {
+    my $text = shift;
+    my $genre_num;
+    if ($text) {
+        my $i = 1;
+        foreach my $t (@genre_strings) {
+            if ( $t eq $text ) {
+                $genre_num = $i;
+                last;
+            }
+            ++$i;
+        }
+    }
+    return $genre_num;
+}
+
+sub genre_num_to_genre_text {
+    my $num = shift;
+    return unless $num > 0 and $num <= scalar @genre_strings;
+    return $genre_strings[ $num - 1 ];
 }
 
 =head1 NAME
@@ -678,6 +848,89 @@ meta data entries may not be compatible with MP3::Info type meta data.
 Returns a reference to an array of cover artwork. Note: the artwork routines
 were suggested and largely contributed by pucklock. (Thanks!)
 
+=over 4
+
+=head2 MP3::Tag Compatible Functions
+
+=item B<autoinfo>
+
+  my($title, $tracknum, $artist, $album, $comment, $year, $genre) =
+    $qt->autoinfo;
+
+Returns an array of tag metadata, similar to the same method in MP3::Tag.
+
+item B<title>
+
+  my $title = $qt->title;
+  $new_title = "My New One";
+  $qt->title($new_title);
+
+Get and set title tag data.
+Similar to the same method in MP3::Tag.
+
+Note this and other tag functions below will usually return the empty 
+string "" when there is tag data lacking, even if an integer result is 
+expected. This is for compatibility with MP3::Tag's implementation of 
+these methods.
+
+item B<comment>
+
+  my $comment = $qt->comment;
+  $new_comment = "My Comment Goes Here";
+  $qt->comment($new_comment);
+
+Get and set comment tag data.
+Similar to the same method in MP3::Tag.
+
+item B<year>
+
+  my $year = $qt->year;
+  $new_year = "My New One";
+  $qt->year($new_year);
+
+Get and set year tag data.
+Similar to the same method in MP3::Tag.
+
+item B<genre>
+
+  my $genre = $qt->genre;
+  $new_genre = 18;
+  $qt->genre($new_genre);
+
+Get and set genre tag data BY NUMBER.
+
+item B<genre_as_text>
+
+  my $text_genre = $qt->genre_as_text;
+  $new_genre = "Rock";
+  $qt->genre_as_text($new_genre);
+
+Get and set genre tag data as text. Note that the given text tag must exist 
+in the genre database to work. See the "our @genre_strings" object in the 
+code, which can be imported by the declaration "our @genre_strings;" 
+in code using the module.
+
+item B<track>
+
+  my $track = $qt->track;
+  my $new_track = 3;
+  $qt->track($new_track);
+
+Get or set the track number.
+
+item B<tracks>
+
+  my ($track, $count) = $qt->tracks;
+  my $new_track_number = 3;
+  my $total_tracks_on_CD = 17;
+  $qt->tracks($new_track_number, $total_tracks_on_CD);
+
+Get or set both the track number and the total tracks on the originating media 
+work. Not actually an MP3::Tag method, but MP4 files, unlike many MP3 files, 
+regularly contain both track number and the total originating CD's track count.
+
+
+=back
 
 =back
 

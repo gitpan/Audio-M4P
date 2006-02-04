@@ -58,4 +58,12 @@ Revision history for Perl modules under Audio::M4P
 
 0.18 Mon Jan 23 2006
     - fixed genre setting logic
+    
+0.19 Sat Jan 28 2006
+    - additions to hashes for  MP4::Info compatibility
+    - additional functions for MP3::Tag compatibility
+    
+0.20 Sat 4 Feb 2006
+    - bug fixes for handling video files with chapters or variant data sections
+    - more tests
 

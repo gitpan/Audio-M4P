@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.18';
+$VERSION = '0.20';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -124,7 +124,7 @@ sub Read {
       substr( ${ $self->{rbuf} }, $starting, 8 );
     if ( $self->{size} == 1 ) {
         $self->{size} =
-          int64fromN( substr( $$self->{rbuf}, $starting + 8, 8 ) );
+          int64fromN( substr( ${ $self->{rbuf} }, $starting + 8, 8 ) );
         $self->{offset} = 16;
     }
     return $self->{size};
@@ -313,9 +313,9 @@ sub insertNewMetaData {
     my ( $self, $type, $data, $before ) = @_;
     my $wrapper = $self->insertNew( $type, '', $before );
     my $flag =
-        ( $type =~ /gnre|disk|trkn/ ) ? 0
-      : ( $type =~ /rtng/ ) ? 21
-      : ( $type =~ /covr/ ) ? 13
+        ( $type =~ /gnre|disk|trkn/i ) ? 0
+      : ( $type =~ /rtng/i ) ? 21
+      : ( $type =~ /covr/i ) ? 13
       : 1;
     $wrapper->insertNew( 'data', pack( 'NN', $flag, 0 ) . $data );
 }
