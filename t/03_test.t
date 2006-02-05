@@ -1,4 +1,4 @@
-# t/03_test.t - check metadat MP3::Tag compatibility methods
+# t/03_test.t - check metadat MP3::Tag compatibility methods & variant MP4 file
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ isa_ok( $object, 'Audio::M4P::Decrypt' );
 
 use Audio::M4P::QuickTime;
 
-my $qt = new Audio::M4P::QuickTime( file => 't/chapterized.m4a' );
+my $qt = new Audio::M4P::QuickTime( file => 't/booka.mp4' );
 isa_ok( $qt, 'Audio::M4P::QuickTime' );
 
 my @tags = $qt->autoinfo;
@@ -32,9 +32,9 @@ binmode $fp1;
 read($fp1, my $pic1, -s $fp1); 
 $qt->SetMetaInfo('covr', $pic1, 1);
 
-$qt->WriteFile('t/temp3.m4a');
+$qt->WriteFile('t/temp3.mp4');
 
-$qt = new Audio::M4P::QuickTime( file => 't/temp3.m4a' );
+$qt = new Audio::M4P::QuickTime( file => 't/temp3.mp4' );
 
 ok( $qt->title   eq $title,   "Title Tag" );
 ok( $qt->comment eq $comment, "Comment Tag" );

@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 use Audio::M4P::Atom;
 
@@ -328,7 +328,7 @@ sub AtomList {
 
 sub FindAtom {
     my ( $self, $type ) = @_;
-    my @atoms = grep { $_->type =~ /$type/i } @{ $self->AtomList() };
+    my @atoms = grep { $_->type =~ /$type$/i } @{ $self->AtomList() };
     return @atoms if wantarray;
     return unless scalar @atoms > 0;
     return $atoms[0];
@@ -436,7 +436,6 @@ sub GetMetaInfo {
         }
     }
     if ($as_text) {
-
         # if as_text, we need to convert the tags to text
         if ( defined $self->{MP4Info}->{DISK} ) {
             ( undef, my $disknum, my $disks ) = unpack 'nnn',
@@ -504,7 +503,11 @@ sub SetMetaInfo {
     my ( $self, $field, $value, $delete_old, $before, $as_text ) = @_;
     $self->GetMetaInfo;    # fill default fields like TRACKCOUNT
     my $type = $tag_types{$field} || lc substr( $field, 0, 4 );
-    my $ilst = $self->FindAtom('ilst') or return;
+    my $ilst = $self->FindAtom('ilst');
+    unless($ilst) {
+        my $moov = $self->FindAtom('moov') or return;
+        $ilst = $self->MakeIlst($moov);
+    }
     my $typ = $type;
     $typ =~ s/\W//g;
     my $entry = $ilst->Contained($typ);
@@ -545,6 +548,26 @@ sub SetMetaInfo {
     }
     $diff -= length $value;
     $self->FixStco($diff);
+}
+
+sub MakeIlst {
+    my($self, $moov) = @_;
+    return if $self->FindAtom('ilst');
+    my @udta_atoms = $moov->Contained('udta') or return;
+    my $udta;
+    foreach my $u (@udta_atoms) {
+        my $parent = $u->parent;
+        my $parent_atom = $parent->getNodeValue();
+        if($parent_atom->type =~ /moov/) {
+            $udta = $u;
+            last;
+        }
+    }
+    $udta->insertNew( 'meta', "\x00\x00\x00\x00" );
+    my $meta = $udta->Contained('meta') or return;
+    $meta->insertNew( 'ilst', '' );
+    my $ilst = $meta->Contained('ilst') or return;
+    return $ilst;
 }
 
 sub iTMS_MetaInfo {
@@ -747,6 +770,8 @@ computer or audio player.
 
 =over 4
 
+=head2 Object Methods
+
 =item B<new>
 
  my $qt = Audio::M4P::QuickTime->new;
@@ -859,7 +884,7 @@ were suggested and largely contributed by pucklock. (Thanks!)
 
 Returns an array of tag metadata, similar to the same method in MP3::Tag.
 
-item B<title>
+=item B<title>
 
   my $title = $qt->title;
   $new_title = "My New One";
@@ -873,7 +898,7 @@ string "" when there is tag data lacking, even if an integer result is
 expected. This is for compatibility with MP3::Tag's implementation of 
 these methods.
 
-item B<comment>
+=item B<comment>
 
   my $comment = $qt->comment;
   $new_comment = "My Comment Goes Here";
@@ -882,7 +907,7 @@ item B<comment>
 Get and set comment tag data.
 Similar to the same method in MP3::Tag.
 
-item B<year>
+=item B<year>
 
   my $year = $qt->year;
   $new_year = "My New One";
@@ -891,7 +916,7 @@ item B<year>
 Get and set year tag data.
 Similar to the same method in MP3::Tag.
 
-item B<genre>
+=item B<genre>
 
   my $genre = $qt->genre;
   $new_genre = 18;
@@ -899,7 +924,7 @@ item B<genre>
 
 Get and set genre tag data BY NUMBER.
 
-item B<genre_as_text>
+=item B<genre_as_text>
 
   my $text_genre = $qt->genre_as_text;
   $new_genre = "Rock";
@@ -910,7 +935,7 @@ in the genre database to work. See the "our @genre_strings" object in the
 code, which can be imported by the declaration "our @genre_strings;" 
 in code using the module.
 
-item B<track>
+=item B<track>
 
   my $track = $qt->track;
   my $new_track = 3;
@@ -918,7 +943,7 @@ item B<track>
 
 Get or set the track number.
 
-item B<tracks>
+=item B<tracks>
 
   my ($track, $count) = $qt->tracks;
   my $new_track_number = 3;
@@ -954,7 +979,7 @@ serialization method.
     
 =head2 SEE ALSO
     
-=item L<MP3::Info>, L<MP4::Info>, L<Mac::iTunes>, L<Net::iTMS>, L<LWP::UserAgent::iTMS_Client>
+=item L<MP3::Info>, L<MP4::Info>, L<MP3::tag>, L<Mac::iTunes>, L<Net::iTMS>, L<LWP::UserAgent::iTMS_Client>
 
 =head1 AUTHOR 
 

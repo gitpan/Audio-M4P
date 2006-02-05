@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -33,6 +33,8 @@ my %container_atom_types = (
     geid   => 1,
     gnre   => 1,
     '©grp' => 1,
+    hinf   => 1,
+    hnti   => 1,
     ilst   => 1,
     matt   => 1,
     mdia   => 1,
@@ -73,9 +75,11 @@ my %noncontainer_atom_types = (
     mvhd   => 1,
     name   => 1,
     priv   => 1,
+    rtp    => 1,
     stco   => 1,
     stsc   => 1,
     stsd   => 1,
+    stp    => 1,
     stts   => 1,
     tkhd   => 1,
     tref   => 1,
@@ -321,7 +325,6 @@ sub insertNewMetaData {
 }
 
 sub addMoreArtwork {
-
     # add more artwork to a covr atom contained in self
     my ( $self, $data ) = @_;
     my $covr = $self->Contained('covr') or croak "No covr atom in this atom";

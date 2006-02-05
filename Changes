@@ -67,3 +67,6 @@ Revision history for Perl modules under Audio::M4P
     - bug fixes for handling video files with chapters or variant data sections
     - more tests
 
+0.21 Sun 5 Feb 2006
+    - changed pod doc formatting
+    - added support to adding tag meta data to video files without meta data atom
