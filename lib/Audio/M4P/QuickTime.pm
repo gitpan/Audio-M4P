@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.21';
+$VERSION = '0.22';
 
 use Audio::M4P::Atom;
 
@@ -503,11 +503,7 @@ sub SetMetaInfo {
     my ( $self, $field, $value, $delete_old, $before, $as_text ) = @_;
     $self->GetMetaInfo;    # fill default fields like TRACKCOUNT
     my $type = $tag_types{$field} || lc substr( $field, 0, 4 );
-    my $ilst = $self->FindAtom('ilst');
-    unless($ilst) {
-        my $moov = $self->FindAtom('moov') or return;
-        $ilst = $self->MakeIlst($moov);
-    }
+    my $ilst = $self->FindAtom('ilst') || $self->MoovUdtaChild || return;
     my $typ = $type;
     $typ =~ s/\W//g;
     my $entry = $ilst->Contained($typ);
@@ -550,11 +546,13 @@ sub SetMetaInfo {
     $self->FixStco($diff);
 }
 
-sub MakeIlst {
-    my($self, $moov) = @_;
-    return if $self->FindAtom('ilst');
+sub MoovUdtaChild {
+    my($self) = @_;
+    my $moov = $self->FindAtom('moov') or return;
     my @udta_atoms = $moov->Contained('udta') or return;
     my $udta;
+    # only want the udta atom which contains user info about moov as a whole
+    # see http://developer.apple.com/documentation/QuickTime/QTFF/QTFFChap2/chapter_3_section_2.html
     foreach my $u (@udta_atoms) {
         my $parent = $u->parent;
         my $parent_atom = $parent->getNodeValue();
@@ -562,11 +560,19 @@ sub MakeIlst {
             $udta = $u;
             last;
         }
-    }
-    $udta->insertNew( 'meta', "\x00\x00\x00\x00" );
-    my $meta = $udta->Contained('meta') or return;
-    $meta->insertNew( 'ilst', '' );
-    my $ilst = $meta->Contained('ilst') or return;
+    }    
+    # if we have a hints atom in this udta, use that else udta
+    return unless $udta;
+    my $hnti = $udta->Contained('hnti');
+    return $hnti || $udta;
+}
+
+sub MakeIlst {
+    my($self) = @_;
+    return if $self->FindAtom('ilst');
+    my $udta = $self->MoovUdta;
+    my $meta = $udta->insertNew( 'meta', "\x00\x00\x00\x00" ) or return;
+    my $ilst = $meta->insertNew( 'ilst', '' ) or return;
     return $ilst;
 }
 
