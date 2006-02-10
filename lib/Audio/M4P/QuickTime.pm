@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '0.22';
+$VERSION = '0.23';
 
 use Audio::M4P::Atom;
 
@@ -44,8 +44,8 @@ our %tag_types = (
     AAID     => 'aaid',
     ALB      => '©alb',
     ALBUM    => '©alb',
-    ART      => '©ART',
-    ARTIST   => '©ART',
+    ARTIST   => '©art',
+    ART      => '©art',
     CMT      => '©cmt',
     COMMENT  => '©cmt',
     COM      => '©com',
@@ -372,14 +372,18 @@ sub ConvertDrmsToMp4a {
         foreach my $u (@unwanted) { $diff += $u->size; $u->selfDelete() }
     }
     print "Shrunk file by $diff bytes during conversion\n" if $self->{DEBUG};
-    $self->FixStco($diff);
+    $self->FixStco($diff, $drms->start);
     $drms->type('mp4a');
 }
 
 sub FixStco {
-    my ( $self, $sinf_sz ) = @_;
-    my @stco_atoms = $self->FindAtom('stco') or croak "No stco atom";
+    my ( $self, $sinf_sz, $change_position ) = @_;
+    my @stco_atoms = $self->FindAtom('stco');
+    my @co64_atoms = $self->FindAtom('co64');
+    # all Quicktime files should have at least one stco or co64 atom
+    croak 'No stco or co64 atom' unless @stco_atoms || @co64_atoms;
     foreach my $stco (@stco_atoms) {
+        next if $stco->start > $change_position;
         my @samples =
           map { $_ - $sinf_sz }
           unpack( "N*",
@@ -388,6 +392,25 @@ sub FixStco {
             $self->{buffer},
             $stco->start + 16,
             $stco->size - 16,
+            pack( 'N*', @samples )
+        );
+    }
+    foreach my $co64 (@co64_atoms) {
+        next if $co64->start > $change_position;
+        my @samples = unpack( "N*",
+          substr( $self->{buffer}, $co64->start + 16, $co64->size - 16 ) );
+        my $num_longs = scalar @samples;
+        for(my $i = 0; $i < $num_longs; $i += 2) {
+            my $low32bits = $samples[$i];
+            my $high32bits = $samples[$i + 1];
+            my $offset64 = ( $high32bits * ( 2**32 ) ) + $low32bits - $sinf_sz;
+            $samples[$i]     = pack( 'N', $offset64 & 0xffff );
+            $samples[$i + 1] = pack( 'N', $offset64 >> 32 );
+        }
+        substr(
+            $self->{buffer},
+            $co64->start + 16,
+            $co64->size - 16,
             pack( 'N*', @samples )
         );
     }
@@ -543,7 +566,7 @@ sub SetMetaInfo {
         $diff -= 24;
     }
     $diff -= length $value;
-    $self->FixStco($diff);
+    $self->FixStco($diff, $ilst->start);
 }
 
 sub MoovUdtaChild {
@@ -565,15 +588,6 @@ sub MoovUdtaChild {
     return unless $udta;
     my $hnti = $udta->Contained('hnti');
     return $hnti || $udta;
-}
-
-sub MakeIlst {
-    my($self) = @_;
-    return if $self->FindAtom('ilst');
-    my $udta = $self->MoovUdta;
-    my $meta = $udta->insertNew( 'meta', "\x00\x00\x00\x00" ) or return;
-    my $ilst = $meta->insertNew( 'ilst', '' ) or return;
-    return $ilst;
 }
 
 sub iTMS_MetaInfo {
@@ -656,6 +670,20 @@ sub title {
     return $tags->{TITLE} || '';
 }
 
+sub album {
+    my ( $self, $new_tag ) = @_;
+    $self->SetMetaInfo( 'ALBUM', $new_tag, 1 ) if $new_tag;
+    my $tags = $self->GetMetaInfo;
+    return $tags->{ALBUM} || '';
+}
+
+sub artist {
+    my ( $self, $new_tag ) = @_;
+    $self->SetMetaInfo( 'ARTIST', $new_tag, 1 ) if $new_tag;
+    my $tags = $self->GetMetaInfo;
+    return $tags->{ARTIST} || '';
+}
+
 sub comment {
     my ( $self, $new_tag ) = @_;
     $self->SetMetaInfo( 'COMMENT', $new_tag, 1 ) if $new_tag;
@@ -667,7 +695,7 @@ sub year {
     my ( $self, $new_tag ) = @_;
     $self->SetMetaInfo( 'YEAR', $new_tag, 1 ) if $new_tag;
     my $tags = $self->GetMetaInfo;
-    return $tags->{YEAR} || '';
+    return $tags->{YEAR} || 0;
 }
 
 sub genre {
@@ -694,7 +722,7 @@ sub track {
         $self->SetMetainfo( 'TRKN', "$new_trkn of $tcount", 1, 0, 1 );
         $tags = $self->GetMetaInfo(1);
     }
-    return $tags->{TRKN} || '';
+    return $tags->{TRKN} || 0;
 }
 
 sub tracks {
@@ -702,11 +730,58 @@ sub tracks {
     $self->SetMetaInfo( 'TRKN', "$new_trkn of $new_tcount", 1, 0, 1 )
       if ( $new_trkn and $new_tcount );
     my $tags   = $self->GetMetaInfo;
-    my $trkn   = $tags->{TRKN};
-    my $tcount = $tags->{TRACKCOUNT};
-    return unless $trkn and $tcount;
+    my $trkn   = $tags->{TRKN} || 0;
+    my $tcount = $tags->{TRACKCOUNT} || 0;
     return ( $trkn, $tcount );
 }
+
+sub total {
+    my ( $self, $new_tcount ) = @_;
+    my $tags;
+    if ( $new_tcount ) {
+        $tags   = $self->GetMetaInfo;
+        $self->SetMetaInfo( 'TRKN', $tags->{TRKN} . " of $new_tcount", 1,0,1 );
+    }
+    $tags   = $self->GetMetaInfo;
+    my $trkn   = $tags->{TRKN} || 0;
+    my $tcount = $tags->{TRACKCOUNT} || 0;
+    return $tcount;
+}
+
+sub all_tags {
+    my ( $self, $tags_href ) = @_;
+    if(ref $tags_href) {
+        $self->title($tags_href->{title}) if $tags_href->{title};
+        $self->artist($tags_href->{artist}) if $tags_href->{artist};
+        $self->album($tags_href->{album}) if $tags_href->{album};
+        $self->comment($tags_href->{comment}) if $tags_href->{comment};
+        $self->genre($tags_href->{genre}) if $tags_href->{genre};
+        $self->year($tags_href->{year}) if $tags_href->{year};
+        $self->track($tags_href->{track}) if $tags_href->{track};
+        $self->total($tags_href->{total}) if $tags_href->{total};        
+    }
+    return {
+        title   => $self->title(),
+        artist  => $self->artist(),
+        album   => $self->album(),
+        comment => $self->comment(),
+        genre   => $self->genre(),
+        year    => $self->year(),
+        track   => $self->track(),
+        total   => $self->total(),
+    };
+}
+
+#------------ other compatibility functions with Audio::TagLib -----------------#
+
+sub setTitle   { title(@_) }
+sub setArtist  { artist(@_) }
+sub setAlbum   { album(@_) }
+sub setComment { comment(@_) }
+sub setGenre   { genre(@_) }
+sub setTrack   { track(@_) }
+sub setTracks  { tracks(@_) }
+sub setTotal   { total(@_) }
 
 #-------------- non-self helper functions --------------------------#
 
@@ -869,6 +944,10 @@ songName, genre, playlistArtistName, genreID, composerName, playlistName,
 year, trackNumber, trackCount, discNumber, discCount, and artworkURL. iTMS 
 meta data entries may not be compatible with MP3::Info type meta data.
 
+Note that though the above method of manipulating M4P data ids intended to be 
+closest to the way iTMS and iTunes does mata data, it may be less intuitive 
+than the MP3::Tag / Audio::TagLib compatible methods below.
+
 =item B<GetCoverArt>
 
   my $artwork = $qt->GetCoverArt();
@@ -881,7 +960,7 @@ were suggested and largely contributed by pucklock. (Thanks!)
 
 =over 4
 
-=head2 MP3::Tag Compatible Functions
+=head2 MP3::Tag and Audio::TagLib Compatible Functions
 
 =item B<autoinfo>
 
@@ -890,19 +969,28 @@ were suggested and largely contributed by pucklock. (Thanks!)
 
 Returns an array of tag metadata, similar to the same method in MP3::Tag.
 
-=item B<title>
+=item B<album>
 
-  my $title = $qt->title;
-  $new_title = "My New One";
-  $qt->title($new_title);
+  my $album = $qt->album;
+  $new_album = "My New Album Name";
+  $qt->album($new_album);
 
 Get and set title tag data.
-Similar to the same method in MP3::Tag.
+Similar to the same method in MP3::TagLib.
 
 Note this and other tag functions below will usually return the empty 
-string "" when there is tag data lacking, even if an integer result is 
-expected. This is for compatibility with MP3::Tag's implementation of 
-these methods.
+string "" when there is tag data lacking, unless an integer result is expected, 
+in which case 0 is returned. This is for compatibility with MP3::Tag and 
+Audio::TagLib's implementation of these methods.
+
+=item b<artist>
+
+  my $artist = $qt->artist;
+  $new_artist = "My New Artist";
+  $qt->artist($new_artist);
+
+Get and set artist tag data.
+Similar to the same method in MP3::TagLib.
 
 =item B<comment>
 
@@ -911,15 +999,6 @@ these methods.
   $qt->comment($new_comment);
 
 Get and set comment tag data.
-Similar to the same method in MP3::Tag.
-
-=item B<year>
-
-  my $year = $qt->year;
-  $new_year = "My New One";
-  $qt->year($new_year);
-
-Get and set year tag data.
 Similar to the same method in MP3::Tag.
 
 =item B<genre>
@@ -941,6 +1020,15 @@ in the genre database to work. See the "our @genre_strings" object in the
 code, which can be imported by the declaration "our @genre_strings;" 
 in code using the module.
 
+=item B<title>
+
+  my $title = $qt->title;
+  $new_title = "My New One";
+  $qt->title($new_title);
+
+Get and set title tag data.
+Similar to the same method in MP3::Tag.
+
 =item B<track>
 
   my $track = $qt->track;
@@ -960,6 +1048,56 @@ Get or set both the track number and the total tracks on the originating media
 work. Not actually an MP3::Tag method, but MP4 files, unlike many MP3 files, 
 regularly contain both track number and the total originating CD's track count.
 
+=item B<total>
+
+my $total = $qt->total;
+  my $new_total = 15;
+  $qt->total($new_total);
+
+Get or set the track total number.
+
+=item B<year>
+
+  my $year = $qt->year;
+  $new_year = "My New One";
+  $qt->year($new_year);
+
+Get and set year tag data.
+Similar to the same method in MP3::Tag.
+
+=item B<all_tags>
+
+  my $tref = $qt->all_tags( album => "My new album", genre => 21 );
+  print $tref->{artist};
+
+Similar to the Audio::File::Tag B<all> method. Set or get all the above tags. 
+To set the tags pass a hash reference with the names of the tags as keys and 
+the tag values as hash values. Returns a hash reference if no argument is 
+specified.
+
+The following tag names are supported by this method:
+album
+artist
+comment
+genre   ( the integer value genre )
+title
+track
+total
+
+=head2 Other Audio::TagLib syntactic compatibility 
+
+ The following 'set' methods are equivalent to methods above used with an argument. 
+ They are included in this module for Audio::TagLib compatibility:
+
+ Method     equivalent to
+ ------------------------
+ setAlbum     album
+ setArtist    artist
+ setTitle     title
+ setComment   comment
+ setGenre     genre
+ setTrack     track
+ setTracks    tracks
 
 =back
 
@@ -969,23 +1107,23 @@ regularly contain both track number and the total originating CD's track count.
 
 =over 4
 
-The Audio::M4P::* code is not re-entrant, due to recursive changes to 
-containers not being thread-safe. Threaded code using these modules 
-may need to lock down all method calls with a semaphore or other 
-serialization method.
+The Audio::M4P::* code is not re-entrant on a per-file basis, due to recursive 
+changes to containers not being thread-safe. Threaded code using these modules 
+may need to lock down all method calls with a semaphore or other serialization 
+method, unless only one thread is used to to modify any given audio file.
 
 =back
 
 
-=head2 SEE ALSO WITH THIS MODULE
+=head1 SEE ALSO WITH THIS MODULE
     
 =item L<Audio::M4P>, L<Audio::M4P::Atom>, L<Audio::M4PDecrypt>
 
 =item L<LWP::UserAgent::iTMS_Client>
     
-=head2 SEE ALSO
+=head1 SEE ALSO
     
-=item L<MP3::Info>, L<MP4::Info>, L<MP3::tag>, L<Mac::iTunes>, L<Net::iTMS>, L<LWP::UserAgent::iTMS_Client>
+=item L<MP3::Info>, L<MP4::Info>, L<MP3::Tag>, L<Audio::TagLib>, L<Audio::File::Tag>, L<Mac::iTunes>, L<Net::iTMS>, L<LWP::UserAgent::iTMS_Client>
 
 =head1 AUTHOR 
 

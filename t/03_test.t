@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 11;
+use Test::More tests => 13;
 
 BEGIN { use_ok('Audio::M4P::Decrypt'); }
 
@@ -18,9 +18,11 @@ isa_ok( $qt, 'Audio::M4P::QuickTime' );
 my @tags = $qt->autoinfo;
 ok( scalar @tags == 7, "autoinfo tag count" );
 
-my ( $title, $comment, $year, $genre, $genre_txt, $track, $track_ct ) =
-  ( "Test Title", "test comment", "1999", 18, "Rock", 5, 20 );
+my ( $title, $comment, $year, $genre, $genre_txt, $track, $track_ct, $album, $artist ) =
+  ( "Test Title", "test comment", "1999", 18, "Rock", 5, 20, "My Album", "The Artist" );
 
+$qt->album($album);
+$qt->artist($artist);
 $qt->title($title);
 $qt->comment($comment);
 $qt->year($year);
@@ -36,9 +38,11 @@ $qt->WriteFile('t/temp3.mp4');
 
 $qt = new Audio::M4P::QuickTime( file => 't/temp3.mp4' );
 
-ok( $qt->title   eq $title,   "Title Tag" );
+ok( $qt->album   eq $album, "Album Tag" );
+ok( $qt->artist  eq $artist, "Artist Tag" );
 ok( $qt->comment eq $comment, "Comment Tag" );
-ok( $qt->year    eq $year,    "Date Tag" );
+ok( $qt->title   eq $title,   "Title Tag" );
+ok( $qt->year   ==  $year,    "Date Tag" );
 ok( $qt->genre == $genre, "Genre Numeric Tag" );
 ok( $qt->genre_as_text eq $genre_txt, "Genre Text Tag" );
 my ( $t, $tt ) = $qt->tracks;

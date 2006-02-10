@@ -70,3 +70,13 @@ Revision history for Perl modules under Audio::M4P
 0.21 Sun 5 Feb 2006
     - changed pod doc formatting
     - added support to adding tag meta data to video files without meta data atom
+
+0.22 Sun 5 Feb 2006
+    - changed adding tag meta data to be compatible with mp4 video (non-iTunes QuickTime) formats
+
+0.23 Tue 8 Feb 2005
+    - some fixes to potential stco table alterations in unusual (non-M4P) Quicktime video files
+     (thanks to pucklock for test cases)
+    - added support for changing tags in MP4 files over 4.2 gigabytes in size 
+      (not that we expect to test one that large anytime soon)
+
