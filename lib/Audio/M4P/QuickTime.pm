@@ -4,12 +4,11 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-use vars qw($VERSION);
-$VERSION = '0.23';
+our $VERSION = '0.24';
 
 use Audio::M4P::Atom;
 
-#-------------- useful hashes -------------------------------#
+#-------------- useful hashes and arrays ------------------------------------#
 
 our %meta_info_types = (
     aaid   => 1,    # album artist
@@ -179,7 +178,7 @@ our @genre_strings = (
     "INVALID_GENRE"
 );
 
-#------------------- object methods ---------------------------------#
+#------------------- object methods -----------------------------------------#
 
 sub new {
     my ( $class, %args ) = @_;
@@ -239,9 +238,9 @@ sub ParseMP4Container {
     $end_posit = $pAtom->start + $pAtom->size   unless $end_posit;
     while ( $posit < $end_posit ) {
         my $atom = new Audio::M4P::Atom(
-            parent => $parent,
-            rbuf   => \$self->{buffer},
-            Read   => $posit
+            parent      => $parent,
+            rbuf        => \$self->{buffer},
+            read_buffer => $posit
         );
         print $atom->type, " at $posit size ", $atom->size, "\n"
           if $self->{DEBUG};
@@ -372,7 +371,7 @@ sub ConvertDrmsToMp4a {
         foreach my $u (@unwanted) { $diff += $u->size; $u->selfDelete() }
     }
     print "Shrunk file by $diff bytes during conversion\n" if $self->{DEBUG};
-    $self->FixStco($diff, $drms->start);
+    $self->FixStco( $diff, $drms->start );
     $drms->type('mp4a');
 }
 
@@ -380,10 +379,16 @@ sub FixStco {
     my ( $self, $sinf_sz, $change_position ) = @_;
     my @stco_atoms = $self->FindAtom('stco');
     my @co64_atoms = $self->FindAtom('co64');
+    my $mdat       = $self->FindAtom('mdat');
+    my $mdat_start = $mdat->start;
+    # if mdat is at top, changes to meta data should not change sample pointers.
+    # FIXME: theoretically we might have mutiple mdat atoms scattered throughout
+    #        the quicktime stream, tho that would break a lot of players too.
+    return if $mdat_start < $change_position;
     # all Quicktime files should have at least one stco or co64 atom
     croak 'No stco or co64 atom' unless @stco_atoms || @co64_atoms;
     foreach my $stco (@stco_atoms) {
-        next if $stco->start > $change_position;
+        next if $stco->start > $change_position; 
         my @samples =
           map { $_ - $sinf_sz }
           unpack( "N*",
@@ -397,22 +402,31 @@ sub FixStco {
     }
     foreach my $co64 (@co64_atoms) {
         next if $co64->start > $change_position;
-        my @samples = unpack( "N*",
-          substr( $self->{buffer}, $co64->start + 16, $co64->size - 16 ) );
+        my @samples =
+          unpack( "N*",
+            substr( $self->{buffer}, $co64->start + 16, $co64->size - 16 ) );
         my $num_longs = scalar @samples;
-        for(my $i = 0; $i < $num_longs; $i += 2) {
-            my $low32bits = $samples[$i];
-            my $high32bits = $samples[$i + 1];
+        for ( my $i = 0 ; $i < $num_longs ; $i += 2 ) {
+            my $low32bits  = $samples[$i];
+            my $high32bits = $samples[ $i + 1 ];
             my $offset64 = ( $high32bits * ( 2**32 ) ) + $low32bits - $sinf_sz;
-            $samples[$i]     = pack( 'N', $offset64 & 0xffff );
-            $samples[$i + 1] = pack( 'N', $offset64 >> 32 );
+            $samples[$i] = pack( 'N', $offset64 & 0xffff );
+            $samples[ $i + 1 ] = pack( 'N', $offset64 >> 32 );
+        }
+        #sanity check: warn and skip if @samples does not contain real sample sizes
+        my $all_numeric_samples = 1;
+        foreach my $samp (@samples) {
+            unless( $samp =~ /^\d+$/ ) {
+                carp "Sample $samp is non-numeric in co64" if $self->{DEBUG};
+                $all_numeric_samples = 0;
+            }
         }
         substr(
             $self->{buffer},
             $co64->start + 16,
             $co64->size - 16,
             pack( 'N*', @samples )
-        );
+        ) if $all_numeric_samples;
     }
 }
 
@@ -459,6 +473,7 @@ sub GetMetaInfo {
         }
     }
     if ($as_text) {
+
         # if as_text, we need to convert the tags to text
         if ( defined $self->{MP4Info}->{DISK} ) {
             ( undef, my $disknum, my $disks ) = unpack 'nnn',
@@ -566,25 +581,27 @@ sub SetMetaInfo {
         $diff -= 24;
     }
     $diff -= length $value;
-    $self->FixStco($diff, $ilst->start);
+    $self->FixStco( $diff, $ilst->start );
 }
 
 sub MoovUdtaChild {
-    my($self) = @_;
-    my $moov = $self->FindAtom('moov') or return;
+    my ($self) = @_;
+    my $moov       = $self->FindAtom('moov')  or return;
     my @udta_atoms = $moov->Contained('udta') or return;
     my $udta;
-    # only want the udta atom which contains user info about moov as a whole
+
+    # we want the udta atom which contains user info about moov as a whole
     # see http://developer.apple.com/documentation/QuickTime/QTFF/QTFFChap2/chapter_3_section_2.html
+    # if we have a hints hnti atom in this udta, use that else return udta 
+    # error return unless there is a udta contained directly within moov atom
     foreach my $u (@udta_atoms) {
-        my $parent = $u->parent;
+        my $parent      = $u->parent;
         my $parent_atom = $parent->getNodeValue();
-        if($parent_atom->type =~ /moov/) {
+        if ( $parent_atom->type =~ /moov/ ) {
             $udta = $u;
             last;
         }
-    }    
-    # if we have a hints atom in this udta, use that else udta
+    }
     return unless $udta;
     my $hnti = $udta->Contained('hnti');
     return $hnti || $udta;
@@ -738,27 +755,28 @@ sub tracks {
 sub total {
     my ( $self, $new_tcount ) = @_;
     my $tags;
-    if ( $new_tcount ) {
-        $tags   = $self->GetMetaInfo;
-        $self->SetMetaInfo( 'TRKN', $tags->{TRKN} . " of $new_tcount", 1,0,1 );
+    if ($new_tcount) {
+        $tags = $self->GetMetaInfo;
+        $self->SetMetaInfo( 'TRKN', $tags->{TRKN} . " of $new_tcount", 1, 0,
+            1 );
     }
-    $tags   = $self->GetMetaInfo;
-    my $trkn   = $tags->{TRKN} || 0;
+    $tags = $self->GetMetaInfo;
+    my $trkn   = $tags->{TRKN}       || 0;
     my $tcount = $tags->{TRACKCOUNT} || 0;
     return $tcount;
 }
 
 sub all_tags {
     my ( $self, $tags_href ) = @_;
-    if(ref $tags_href) {
-        $self->title($tags_href->{title}) if $tags_href->{title};
-        $self->artist($tags_href->{artist}) if $tags_href->{artist};
-        $self->album($tags_href->{album}) if $tags_href->{album};
-        $self->comment($tags_href->{comment}) if $tags_href->{comment};
-        $self->genre($tags_href->{genre}) if $tags_href->{genre};
-        $self->year($tags_href->{year}) if $tags_href->{year};
-        $self->track($tags_href->{track}) if $tags_href->{track};
-        $self->total($tags_href->{total}) if $tags_href->{total};        
+    if ( ref $tags_href ) {
+        $self->title( $tags_href->{title} )     if $tags_href->{title};
+        $self->artist( $tags_href->{artist} )   if $tags_href->{artist};
+        $self->album( $tags_href->{album} )     if $tags_href->{album};
+        $self->comment( $tags_href->{comment} ) if $tags_href->{comment};
+        $self->genre( $tags_href->{genre} )     if $tags_href->{genre};
+        $self->year( $tags_href->{year} )       if $tags_href->{year};
+        $self->track( $tags_href->{track} )     if $tags_href->{track};
+        $self->total( $tags_href->{total} )     if $tags_href->{total};
     }
     return {
         title   => $self->title(),
@@ -944,9 +962,9 @@ songName, genre, playlistArtistName, genreID, composerName, playlistName,
 year, trackNumber, trackCount, discNumber, discCount, and artworkURL. iTMS 
 meta data entries may not be compatible with MP3::Info type meta data.
 
-Note that though the above method of manipulating M4P data ids intended to be 
-closest to the way iTMS and iTunes does mata data, it may be less intuitive 
-than the MP3::Tag / Audio::TagLib compatible methods below.
+Note that although this method of manipulating M4P data tags is closest to the 
+way iTMS and iTunes do metadata, it may be less intuitive for most audio tag 
+programmers than the MP3::Tag and Audio::TagLib compatible methods below.
 
 =item B<GetCoverArt>
 
@@ -983,7 +1001,7 @@ string "" when there is tag data lacking, unless an integer result is expected,
 in which case 0 is returned. This is for compatibility with MP3::Tag and 
 Audio::TagLib's implementation of these methods.
 
-=item b<artist>
+=item B<artist>
 
   my $artist = $qt->artist;
   $new_artist = "My New Artist";
@@ -1050,7 +1068,7 @@ regularly contain both track number and the total originating CD's track count.
 
 =item B<total>
 
-my $total = $qt->total;
+  my $total = $qt->total;
   my $new_total = 15;
   $qt->total($new_total);
 
@@ -1110,7 +1128,7 @@ total
 The Audio::M4P::* code is not re-entrant on a per-file basis, due to recursive 
 changes to containers not being thread-safe. Threaded code using these modules 
 may need to lock down all method calls with a semaphore or other serialization 
-method, unless only one thread is used to to modify any given audio file.
+method, unless only one thread is used to modify any given audio file.
 
 =back
 

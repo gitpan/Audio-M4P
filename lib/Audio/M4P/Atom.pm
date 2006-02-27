@@ -4,8 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-use vars qw($VERSION);
-$VERSION = '0.23';
+our $VERSION = '0.24';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -110,7 +109,8 @@ sub new {
     $self->{node} = Tree::Simple->new($self);
     $self->{parent} ||= 0;
     $self->{parent}->addChild( $self->{node} ) if ref $self->{parent};
-    $self->Read( $self->{Read} ) if defined $self->{Read} and $self->{rbuf};
+    $self->read_buffer( $self->{read_buffer} ) 
+      if defined $self->{read_buffer} and $self->{rbuf};
     return $self;
 }
 
@@ -120,7 +120,7 @@ sub node { return shift->{node} }
 
 sub rbuf { return shift->{rbuf} }
 
-sub Read {
+sub read_buffer {
     my ( $self, $starting ) = @_;
     $self->{start}  = $starting;
     $self->{offset} = 8;

@@ -1,78 +1,9 @@
 Revision history for Perl modules under Audio::M4P
 
-0.01 Wed April 28 2004
-    - original version (alphas were called Crypt::MP4Stream)
-
-0.02 Fri April 30 2004
-    - portability changes 
-
-0.03 Sat May 8 2004
-    - some loop optimization and minor tweaks
-    
-0.04 Tue June 15 2004
-    - upgraded to ITunes 4.6, added fix
-    
-0.05 Mon July 12 2004
-    - removed some OS specific code in new() to allow Solaris to use
-    
-0.06 Mon April 18 2005
-    - First revision since iTunes 4.7+ version incompatibility began
-    - changed name from Audio::M4pDecrypt to Audio::M4P::Decrypt
-    - Added analysis and meta data editing
-    - refactored original code into four .pm files, with additional functionality
-    
-0.07 Mon April 25 2005
-    - Revision to pod docs
-    
-0.08 Tue April 26 2006
-    - Further pod revision
-    
-0.09 Fri April 29 2005
-    - fractional seconds in metadata SS field calculation bugfix
-    
-0.10 Mon May 9 2005
-    - further pod revision
-    
-0.11 Wed May 25 2005
-    - corrected meta info atom types bug where '©alb' and '@alb' were exchanged
-    - added meta info compatibility function for iTMS XML data sent with 
-      itms:// url's (the iTMS_MetaInfo method)
-
-0.12 Mon May 30 2005
-    - added resize support for atoms > 4 gigs in size
-    - changed GetMetaInfo method to support return of text info
-
-0.13 Sat June 18 2005
-    - revised meta data get/set functions to accept text arguments for data
-      and convert to and from binary form
-    - added some more meta container data types to list of containers
-    
-0.14 Tue July 19 2005
-    - class internal method changes in Atom.pm to support covr atom handling
-
-0.15 Thu July 28 2005
-    - changed cover artwork meta data additions to follow iTunes usage
-    
-0.16 Thu Sep 1 2005
-    - some code syntax and spacing cleanup
-
-0.18 Mon Jan 23 2006
-    - fixed genre setting logic
-    
-0.19 Sat Jan 28 2006
-    - additions to hashes for  MP4::Info compatibility
-    - additional functions for MP3::Tag compatibility
-    
-0.20 Sat 4 Feb 2006
-    - bug fixes for handling video files with chapters or variant data sections
-    - more tests
-
-0.21 Sun 5 Feb 2006
-    - changed pod doc formatting
-    - added support to adding tag meta data to video files without meta data atom
-
-0.22 Sun 5 Feb 2006
-    - changed adding tag meta data to be compatible with mp4 video (non-iTunes QuickTime) formats
+0.24 Wed 15 Feb 2006
+    - pod fixes
+    - changed to perl 5.8 syntax conventions for our $VERSION;
+    - another atypical 64-bit video file fix for a test case from pucklock
 
 0.23 Tue 8 Feb 2005
     - some fixes to potential stco table alterations in unusual (non-M4P) Quicktime video files
@@ -80,3 +11,76 @@ Revision history for Perl modules under Audio::M4P
     - added support for changing tags in MP4 files over 4.2 gigabytes in size 
       (not that we expect to test one that large anytime soon)
 
+0.22 Sun 5 Feb 2006
+    - changed adding tag meta data to be compatible with mp4 video (non-iTunes QuickTime) formats
+
+0.21 Sun 5 Feb 2006
+    - changed pod doc formatting
+    - added support to adding tag meta data to video files without meta data atom
+
+0.20 Sat 4 Feb 2006
+    - bug fixes for handling video files with chapters or variant data sections
+    - more tests
+
+0.19 Sat Jan 28 2006
+    - additions to hashes for  MP4::Info compatibility
+    - additional functions for MP3::Tag compatibility
+    
+0.18 Mon Jan 23 2006
+    - fixed genre setting logic
+    
+0.16 Thu Sep 1 2005
+    - some code syntax and spacing cleanup
+
+0.15 Thu July 28 2005
+    - changed cover artwork meta data additions to follow iTunes usage
+    
+0.14 Tue July 19 2005
+    - class internal method changes in Atom.pm to support covr atom handling
+
+0.13 Sat June 18 2005
+    - revised meta data get/set functions to accept text arguments for data
+      and convert to and from binary form
+    - added some more meta container data types to list of containers
+    
+0.12 Mon May 30 2005
+    - added resize support for atoms > 4 gigs in size
+    - changed GetMetaInfo method to support return of text info
+
+0.11 Wed May 25 2005
+    - corrected meta info atom types bug where '©alb' and '@alb' were exchanged
+    - added meta info compatibility function for iTMS XML data sent with 
+      itms:// url's (the iTMS_MetaInfo method)
+
+0.10 Mon May 9 2005
+    - further pod revision
+    
+0.09 Fri April 29 2005
+    - fractional seconds in metadata SS field calculation bugfix
+    
+0.08 Tue April 26 2006
+    - Further pod revision
+    
+0.07 Mon April 25 2005
+    - Revision to pod docs
+    
+0.06 Mon April 18 2005
+    - First revision since iTunes 4.7+ version incompatibility began
+    - changed name from Audio::M4pDecrypt to Audio::M4P::Decrypt
+    - Added analysis and meta data editing
+    - refactored original code into four .pm files, with additional functionality
+    
+0.05 Mon July 12 2004
+    - removed some OS specific code in new() to allow Solaris to use
+    
+0.04 Tue June 15 2004
+    - upgraded to ITunes 4.6, added fix
+    
+0.03 Sat May 8 2004
+    - some loop optimization and minor tweaks
+    
+0.02 Fri April 30 2004
+    - portability changes 
+
+0.01 Wed April 28 2004
+    - original version (alphas were called Crypt::MP4Stream)

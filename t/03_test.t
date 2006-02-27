@@ -1,4 +1,4 @@
-# t/03_test.t - check metadat MP3::Tag compatibility methods & variant MP4 file
+# t/03_test.t - check metadat MP3::Tag compatibility methods & variant MP4 files
 
 use strict;
 use warnings;
@@ -48,3 +48,8 @@ ok( $qt->genre_as_text eq $genre_txt, "Genre Text Tag" );
 my ( $t, $tt ) = $qt->tracks;
 ok( $t == $track,     "Tracks Tags : track number" );
 ok( $tt == $track_ct, "Tracks Tags : track count" );
+
+$qt = new Audio::M4P::QuickTime( file => 't/unmuxed.mp4' );
+$qt->SetMetaInfo('covr', $pic1, 1);
+$qt->WriteFile('t/temp4.mp4');
+
