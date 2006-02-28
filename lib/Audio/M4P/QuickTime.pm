@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.24';
+our $VERSION = '0.25';
 
 use Audio::M4P::Atom;
 
@@ -379,7 +379,7 @@ sub FixStco {
     my ( $self, $sinf_sz, $change_position ) = @_;
     my @stco_atoms = $self->FindAtom('stco');
     my @co64_atoms = $self->FindAtom('co64');
-    my $mdat       = $self->FindAtom('mdat');
+    my $mdat       = $self->FindAtom('mdat') or return;
     my $mdat_start = $mdat->start;
     # if mdat is at top, changes to meta data should not change sample pointers.
     # FIXME: theoretically we might have mutiple mdat atoms scattered throughout

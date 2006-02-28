@@ -1,5 +1,8 @@
 Revision history for Perl modules under Audio::M4P
 
+0.25 Tue 28 Feb 2006
+    - fix of a test file left out of manifest in version 0.24, needed for testing
+
 0.24 Wed 15 Feb 2006
     - pod fixes
     - changed to perl 5.8 syntax conventions for our $VERSION;
