@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 use Crypt::Rijndael;
 use Digest::MD5;

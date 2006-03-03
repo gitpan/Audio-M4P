@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 use Audio::M4P::Atom;
 
@@ -379,16 +379,20 @@ sub FixStco {
     my ( $self, $sinf_sz, $change_position ) = @_;
     my @stco_atoms = $self->FindAtom('stco');
     my @co64_atoms = $self->FindAtom('co64');
-    my $mdat       = $self->FindAtom('mdat') or return;
-    my $mdat_start = $mdat->start;
-    # if mdat is at top, changes to meta data should not change sample pointers.
-    # FIXME: theoretically we might have mutiple mdat atoms scattered throughout
-    #        the quicktime stream, tho that would break a lot of players too.
-    return if $mdat_start < $change_position;
+
     # all Quicktime files should have at least one stco or co64 atom
     croak 'No stco or co64 atom' unless @stco_atoms || @co64_atoms;
+    
+    # if mdat is before change postion will not need to do anything
+    my @mdat = $self->FindAtom('mdat') or return;
+    my $all_mdat_before = 1;
+    foreach my $mdt (@mdat) {
+        $all_mdat_before = 0 if $mdt->start > $change_position;
+    }
+    return if $all_mdat_before;
+    
     foreach my $stco (@stco_atoms) {
-        next if $stco->start > $change_position; 
+        next if $stco->start > $change_position;
         my @samples =
           map { $_ - $sinf_sz }
           unpack( "N*",
@@ -410,23 +414,15 @@ sub FixStco {
             my $low32bits  = $samples[$i];
             my $high32bits = $samples[ $i + 1 ];
             my $offset64 = ( $high32bits * ( 2**32 ) ) + $low32bits - $sinf_sz;
-            $samples[$i] = pack( 'N', $offset64 & 0xffff );
-            $samples[ $i + 1 ] = pack( 'N', $offset64 >> 32 );
-        }
-        #sanity check: warn and skip if @samples does not contain real sample sizes
-        my $all_numeric_samples = 1;
-        foreach my $samp (@samples) {
-            unless( $samp =~ /^\d+$/ ) {
-                carp "Sample $samp is non-numeric in co64" if $self->{DEBUG};
-                $all_numeric_samples = 0;
-            }
+            $samples[$i] = $offset64 & 0xffff;
+            $samples[ $i + 1 ] = $offset64 >> 32;
         }
         substr(
             $self->{buffer},
             $co64->start + 16,
             $co64->size - 16,
             pack( 'N*', @samples )
-        ) if $all_numeric_samples;
+        );
     }
 }
 
@@ -541,7 +537,7 @@ sub SetMetaInfo {
     my ( $self, $field, $value, $delete_old, $before, $as_text ) = @_;
     $self->GetMetaInfo;    # fill default fields like TRACKCOUNT
     my $type = $tag_types{$field} || lc substr( $field, 0, 4 );
-    my $ilst = $self->FindAtom('ilst') || $self->MoovUdtaChild || return;
+    my $ilst = $self->FindAtom('ilst') || $self->MakeIlstAtom || return;
     my $typ = $type;
     $typ =~ s/\W//g;
     my $entry = $ilst->Contained($typ);
@@ -584,7 +580,7 @@ sub SetMetaInfo {
     $self->FixStco( $diff, $ilst->start );
 }
 
-sub MoovUdtaChild {
+sub MakeIlstAtom {
     my ($self) = @_;
     my $moov       = $self->FindAtom('moov')  or return;
     my @udta_atoms = $moov->Contained('udta') or return;
@@ -592,8 +588,6 @@ sub MoovUdtaChild {
 
     # we want the udta atom which contains user info about moov as a whole
     # see http://developer.apple.com/documentation/QuickTime/QTFF/QTFFChap2/chapter_3_section_2.html
-    # if we have a hints hnti atom in this udta, use that else return udta 
-    # error return unless there is a udta contained directly within moov atom
     foreach my $u (@udta_atoms) {
         my $parent      = $u->parent;
         my $parent_atom = $parent->getNodeValue();
@@ -602,9 +596,31 @@ sub MoovUdtaChild {
             last;
         }
     }
+    # error return unless there is a udta contained directly within moov atom
     return unless $udta;
-    my $hnti = $udta->Contained('hnti');
-    return $hnti || $udta;
+
+    # if we have a meta atom, add an hdlr atom and ilst to it 
+    # if we do not have one make one 
+    my( $meta, $hdlr, $ilst );
+    $meta = $udta->Contained('meta');
+    unless($meta) {
+        $udta->insertNew( 'meta', "\0\0\0\0" );
+        $self->FixStco( -12, $udta->start );
+        $meta = $udta->Contained('meta');
+    }
+    $hdlr = $meta->Contained('hdlr');
+    unless($hdlr) {
+        $meta->insertNew( 'hdlr', "\0\0\0\0\0\0\0\0mdirappl\0\0\0\0\0\0\0\0\0" );
+        $self->FixStco( -33, $meta->start );
+        $hdlr = $meta->Contained('hdlr');
+    }
+    $ilst = $meta->Contained('ilst');
+    unless($ilst) {
+        $meta->insertNew( 'ilst', '' );
+        $self->FixStco( -8, $meta->start );
+            $ilst = $meta->Contained('ilst');
+    }
+    return $ilst;
 }
 
 sub iTMS_MetaInfo {

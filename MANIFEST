@@ -11,6 +11,7 @@ bin/M4pDecrypt.PL
 t/01_test.t
 t/02_test.t
 t/03_test.t
+t/04_test.t
 t/elise.m4a
 t/elisepic1.jpg
 t/elisepic2.jpg
