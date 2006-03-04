@@ -1,5 +1,10 @@
 Revision history for Perl modules under Audio::M4P
 
+0.27 Sat 4 Mar 2006
+    - more bizarre variant MP4 file meta data fixes 
+      (Sorry, we will probably never support missing moov atoms.)
+    - setting meta info as text was always replacing old meta data: fixed.
+
 0.26 Thu 2 Mar 2006
     - some more code to allow for a few especially twisted mp4 video formats,
       such as multiple mdat atoms at beginning and end of the file

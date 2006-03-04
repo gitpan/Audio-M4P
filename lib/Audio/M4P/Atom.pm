@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -89,8 +89,8 @@ my %noncontainer_atom_types = (
 
 sub int64toN {
     my ($int64) = @_;
-    my $high32bits = pack( 'N', $int64 >> 32 );
-    my $low32bits  = pack( 'N', $int64 & 0xffff );
+    my $high32bits = pack( 'N', int($int64 / (2**32) + 0.0001) );
+    my $low32bits  = pack( 'N', $int64 % (2**32) );
     return $high32bits . $low32bits;
 }
 

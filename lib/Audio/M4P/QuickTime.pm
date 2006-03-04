@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 use Audio::M4P::Atom;
 
@@ -282,7 +282,8 @@ sub ParseDrms {
         $drms->start + $drms->size - 36
     );
     $self->{userID} = unpack 'N*', $self->FindAtomData('user');
-    $self->{keyID}  = unpack 'N*', $self->FindAtomData('key');
+    my $key = $self->FindAtomData('key');
+    $self->{keyID}  = unpack 'N*', $key   if $key;
     $self->{priv} = $self->FindAtomData('priv');
     my $name = $self->FindAtomData('name');
     $self->{name} = substr( $name, 0, index( $name, "\0" ) );
@@ -392,9 +393,8 @@ sub FixStco {
     return if $all_mdat_before;
     
     foreach my $stco (@stco_atoms) {
-        next if $stco->start > $change_position;
         my @samples =
-          map { $_ - $sinf_sz }
+          map { ($_ > $change_position) ? $_ - $sinf_sz : $_ }
           unpack( "N*",
             substr( $self->{buffer}, $stco->start + 16, $stco->size - 16 ) );
         substr(
@@ -405,17 +405,17 @@ sub FixStco {
         );
     }
     foreach my $co64 (@co64_atoms) {
-        next if $co64->start > $change_position;
         my @samples =
           unpack( "N*",
             substr( $self->{buffer}, $co64->start + 16, $co64->size - 16 ) );
         my $num_longs = scalar @samples;
         for ( my $i = 0 ; $i < $num_longs ; $i += 2 ) {
-            my $low32bits  = $samples[$i];
-            my $high32bits = $samples[ $i + 1 ];
-            my $offset64 = ( $high32bits * ( 2**32 ) ) + $low32bits - $sinf_sz;
-            $samples[$i] = $offset64 & 0xffff;
-            $samples[ $i + 1 ] = $offset64 >> 32;
+            my $high32bits = $samples[ $i ];
+            my $low32bits = $samples[ $i + 1 ];
+            my $offset64 = ( $high32bits * ( 2**32 ) ) + $low32bits;
+            $offset64 -= $sinf_sz if $offset64 > $change_position;
+            $samples[$i + 1] = $offset64 % (2**32);
+            $samples[ $i ] = int($offset64 / (2**32) + 0.0001);
         }
         substr(
             $self->{buffer},
@@ -565,7 +565,8 @@ sub SetMetaInfo {
                 $value = genre_text_to_genre_num($value);
             }
             else { $h{ $iTMS_meta_atoms{$type} } = $value }
-            return $self->iTMS_MetaInfo( \%h );
+            $self->FixStco( $diff, $ilst->start ) if $diff;
+            return $self->iTMS_MetaInfo( \%h, 1 );
         }
     }
     if ( $typ eq 'covr' and $ilst->Contained($typ) ) {
@@ -582,8 +583,8 @@ sub SetMetaInfo {
 
 sub MakeIlstAtom {
     my ($self) = @_;
-    my $moov       = $self->FindAtom('moov')  or return;
-    my @udta_atoms = $moov->Contained('udta') or return;
+    my $moov       = $self->FindAtom('moov') or croak "No moov atom found";
+    my @udta_atoms = $moov->Contained('udta');
     my $udta;
 
     # we want the udta atom which contains user info about moov as a whole
@@ -596,9 +597,14 @@ sub MakeIlstAtom {
             last;
         }
     }
-    # error return unless there is a udta contained directly within moov atom
-    return unless $udta;
-
+    
+    # if no udta, make one under moov
+    unless($udta) {
+        $moov->insertNew( 'udta', '' );
+        $self->FixStco( -8, $moov->start );
+        $udta = $moov->Contained('udta');
+    }
+    
     # if we have a meta atom, add an hdlr atom and ilst to it 
     # if we do not have one make one 
     my( $meta, $hdlr, $ilst );
@@ -624,7 +630,7 @@ sub MakeIlstAtom {
 }
 
 sub iTMS_MetaInfo {
-    my ( $self, $dict ) = @_;
+    my ( $self, $dict, $keep_old ) = @_;
     my ( $key, $type, %info );
     if ($dict) {
         while ( ( $key, $type ) = each %iTMS_dict_meta_types ) {
@@ -649,7 +655,7 @@ sub iTMS_MetaInfo {
                 my $gnre = genre_text_to_genre_num($data);
                 $data = pack "n", $gnre unless $gnre eq 'INVALID_GENRE';
             }
-            $self->SetMetaInfo( $type, $data, 1, undef, undef );
+            $self->SetMetaInfo( $type, $data, $keep_old ? undef : 1, undef, undef );
         }
     }
     while ( ( $key, $type ) = each %iTMS_dict_meta_types ) {

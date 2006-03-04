@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 13;
+use Test::More tests => 14;
 
 BEGIN { use_ok( 'Audio::M4P::Decrypt' ); }
 
@@ -46,9 +46,9 @@ close $fp2;
 $qt->SetMetaInfo('cprt', "\xE2\x84\x97 2005 Possessive Records", 1);
 $qt->SetMetaInfo('covr', $pic1, 1);
 $qt->SetMetaInfo('covr', $pic2);
-$qt->WriteFile('t/temp.m4a');
+$qt->WriteFile('t/temp01a.m4a');
 
-$qt = new Audio::M4P::QuickTime(file => 't/temp.m4a');
+$qt = new Audio::M4P::QuickTime(file => 't/temp01a.m4a');
 isa_ok ($qt, 'Audio::M4P::QuickTime');
 
 my $href = $qt->iTMS_MetaInfo();
@@ -65,10 +65,12 @@ my $covr_atom = $covr[0];
 my @data_atoms = $covr_atom->Contained('data');
 ok(scalar @data_atoms == 2, "two cover data art entries added");
 
-$qt->SetMetaInfo('cprt', "2003 My Company", 1, undef, 1);
-$qt->WriteFile('t/temp2.m4a');
+$qt->SetMetaInfo('trkn', "2 of 12", 1, 0, 1);
+$qt->SetMetaInfo('cprt', "2003 My Company", 1, 0, 1);
+$qt->WriteFile('t/temp01b.m4a');
 
-$qt = new Audio::M4P::QuickTime(file => 't/temp2.m4a');
+$qt = new Audio::M4P::QuickTime(file => 't/temp01b.m4a');
 $href = $qt->GetMetaInfo(1);
+ok($href->{TRKN} == 2, "Revised track num");
 ok($href->{CPRT} =~ /2003/, "Revised meta copyright");
 ok($href->{GENRE} eq 'BeBop', "Genre ID");
