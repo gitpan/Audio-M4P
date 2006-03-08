@@ -1,3 +1,6 @@
+use strict;  
+# kwalitee, schmalitee...
+# buggy CPANTS wants even dumb doc placeholder modules to use strict...
 
 =head1 NAME
 

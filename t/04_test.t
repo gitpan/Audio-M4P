@@ -3,12 +3,20 @@
 use strict;
 use warnings;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 use Audio::M4P::QuickTime;
 
-my $qt = new Audio::M4P::QuickTime( file => 't/gpac.mp4' );
+my $qt = new Audio::M4P::QuickTime( file => 't/elise.m4a' );
 isa_ok( $qt, 'Audio::M4P::QuickTime' );
+
+my $meta = $qt->FindAtom('meta');
+my $len = $meta->size;
+my $pos = $meta->start;
+$qt->DeleteAtom('meta');
+$qt->FixStco($len, $pos);
+ok(!$qt->FindAtom('ilst'), "ilst atom removed with meta"); 
+
 
 my ( $title, $comment, $year, $genre, $genre_txt, $track, $track_ct, $album, $artist ) =
   ( "Fourth (Fur Elise) Test Title", "test comment", "1999", 18, "Rock", 5, 20, "My Album", "The Artist" );
@@ -26,9 +34,9 @@ binmode $fp1;
 read($fp1, my $pic1, -s $fp1); 
 $qt->SetMetaInfo('covr', $pic1, 1);
 
-$qt->WriteFile('t/temp04.mp4');
+$qt->WriteFile('t/temp04.m4a');
 
-$qt = new Audio::M4P::QuickTime( file => 't/temp04.mp4' );
+$qt = new Audio::M4P::QuickTime( file => 't/temp04.m4a' );
 
 ok( $qt->album   eq $album, "Album Tag" );
 ok( $qt->artist  eq $artist, "Artist Tag" );

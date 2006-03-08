@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 use Audio::M4P::Atom;
 
@@ -31,7 +31,7 @@ our %meta_info_types = (
     plid   => 1,    # purchase id ?
     rtng   => 1,    # rating (integer)
     stik   => 1
-    ,  # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show
+    ,  # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show, ?? 0x2 newsreel
     tmpo   => 1,    # tempo (beats per minute)
     '©too' => 1,    # encoder
     trkn   => 1,    # two fields: [field 1] track num. of [field 2] total tracks
@@ -624,7 +624,7 @@ sub MakeIlstAtom {
     unless($ilst) {
         $meta->insertNew( 'ilst', '' );
         $self->FixStco( -8, $meta->start );
-            $ilst = $meta->Contained('ilst');
+        $ilst = $meta->Contained('ilst');
     }
     return $ilst;
 }
@@ -869,7 +869,6 @@ may be containers for other atoms. iTunes Music Store M4P music files are
 Quicktime audio files which are encrypted using a combination of information 
 in the file's drms atom and information which is commonly stored on the 
 computer or audio player. 
-    
 
 =head1 SYNOPSIS
 
@@ -889,9 +888,9 @@ computer or audio player.
 
 =head1 METHODS
 
-=over 4
-
 =head2 Object Methods
+
+=over 4
 
 =item B<new>
 
@@ -982,7 +981,9 @@ Get or set a meta information field via a hash reference to an Apple iTMS
 type dict data structure. Possible fields are copyright, comments, 
 songName, genre, playlistArtistName, genreID, composerName, playlistName,
 year, trackNumber, trackCount, discNumber, discCount, and artworkURL. iTMS 
-meta data entries may not be compatible with MP3::Info type meta data.
+meta data entries may not be compatible with MP3::Info type meta data. An
+optional second argument, if true, prevents the method from replacing old meta
+information, as in $qt->iTMS_MetaInfo($hashref, 1);
 
 Note that although this method of manipulating M4P data tags is closest to the 
 way iTMS and iTunes do metadata, it may be less intuitive for most audio tag 
@@ -998,9 +999,11 @@ programmers than the MP3::Tag and Audio::TagLib compatible methods below.
 Returns a reference to an array of cover artwork. Note: the artwork routines
 were suggested and largely contributed by pucklock. (Thanks!)
 
-=over 4
+=back
 
 =head2 MP3::Tag and Audio::TagLib Compatible Functions
+
+=over 4
 
 =item B<autoinfo>
 
@@ -1124,22 +1127,75 @@ title
 track
 total
 
+=back
+
 =head2 Other Audio::TagLib syntactic compatibility 
 
- The following 'set' methods are equivalent to methods above used with an argument. 
- They are included in this module for Audio::TagLib compatibility:
+=over 4
 
- Method     equivalent to
- ------------------------
- setAlbum     album
- setArtist    artist
- setTitle     title
- setComment   comment
- setGenre     genre
- setTrack     track
- setTracks    tracks
+=item The following 'set' methods are equivalent to methods above used with an argument. They are included in this module for Audio::TagLib compatibility:
+
+=item Method     equivalent to
+
+=item ------------------------
+
+=item setAlbum     album
+
+=item setArtist    artist
+
+=item setTitle     title
+
+=item setComment   comment
+
+=item setGenre     genre
+
+=item setTrack     track
+
+=item setTracks    tracks
+
+=item setTotal     total tracks
 
 =back
+
+=head2 Class Internal Methods and Functions
+
+=over 4
+
+=item AtomList
+
+=item AtomTree
+
+=item ConvertDrmsToMp4a
+
+=item DeleteAtom
+
+=item DumpTree
+
+=item FindAtom
+
+=item FindAtomData
+
+=item FixStco
+
+=item GetSampleTable
+
+=item MakeIlstAtom
+
+=item MetaInfo
+
+=item ParseDrms
+
+=item ParseMP4Container
+
+=item ParseMeta
+
+=item ParseStsd
+
+=item genre_num_to_genre_text
+
+=item genre_text_to_genre_num
+
+=item isMetaDataType
 
 =back
 
@@ -1154,25 +1210,40 @@ method, unless only one thread is used to modify any given audio file.
 
 =back
 
-
 =head1 SEE ALSO WITH THIS MODULE
-    
+
+=over 4
+
 =item L<Audio::M4P>, L<Audio::M4P::Atom>, L<Audio::M4PDecrypt>
 
 =item L<LWP::UserAgent::iTMS_Client>
-    
+
+=back    
+
 =head1 SEE ALSO
-    
+
+=over 4
+
 =item L<MP3::Info>, L<MP4::Info>, L<MP3::Tag>, L<Audio::TagLib>, L<Audio::File::Tag>, L<Mac::iTunes>, L<Net::iTMS>, L<LWP::UserAgent::iTMS_Client>
+
+=back
 
 =head1 AUTHOR 
 
+=over 4
+
 William Herrera B<wherrera@skylightview.com>. 
+
+=back
 
 =head1 SUPPORT 
 
+=over 4
+
 Questions, feature requests and bug reports should go to 
 <wherrera@skylightview.com>.
+
+=back
 
 =head1 COPYRIGHT 
 

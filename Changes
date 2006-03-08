@@ -1,5 +1,10 @@
 Revision history for Perl modules under Audio::M4P
 
+0.28  Wed Mar 8 2006
+    - added to pod docs for some less used options
+    - pod formatting fixes
+    - removed a 270K video test file (cable TV sample, content questionably protected)
+
 0.27 Sat 4 Mar 2006
     - more bizarre variant MP4 file meta data fixes 
       (Sorry, we will probably never support missing moov atoms.)

@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 use Crypt::Rijndael;
 use Digest::MD5;
@@ -151,7 +151,11 @@ More descriptive alias for the B<DeDRMS> method.
 
 =head1 B<SEE ALSO>
 
+=over 4
+
 =item L<LWP::UserAgent::iTMS_Client>
+
+=back
 
 =head1 B<NOTES>
 
