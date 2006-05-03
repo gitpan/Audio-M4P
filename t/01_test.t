@@ -74,3 +74,4 @@ $href = $qt->GetMetaInfo(1);
 ok($href->{TRKN} == 2, "Revised track num");
 ok($href->{CPRT} =~ /2003/, "Revised meta copyright");
 ok($href->{GENRE} eq 'BeBop', "Genre ID");
+

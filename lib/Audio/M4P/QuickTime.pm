@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.28';
+our $VERSION = '0.30';
 
 use Audio::M4P::Atom;
 
@@ -443,6 +443,16 @@ sub DeleteAtom {
     return $atom->selfDelete();
 }
 
+sub DeleteAtomWithStcoFix {
+    my ( $self, $unwanted ) = @_;
+    my $atom = $self->FindAtom($unwanted) or return;
+    my $siz = $atom->size;
+    my $pos = $atom->start;
+    $atom->selfDelete() or return;
+    $self->FixStco( $siz, $pos );
+    return 1;
+}
+
 sub GetMetaInfo {
     my ( $self, $as_text ) = @_;
     my %meta_tags;
@@ -758,7 +768,7 @@ sub track {
     my $tags = $self->GetMetaInfo(1);
     if ($new_trkn) {
         my $tcount = $tags->{TRACKCOUNT} || 0;
-        $self->SetMetainfo( 'TRKN', "$new_trkn of $tcount", 1, 0, 1 );
+        $self->SetMetaInfo( 'TRKN', "$new_trkn of $tcount", 1, 0, 1 );
         $tags = $self->GetMetaInfo(1);
     }
     return $tags->{TRKN} || 0;
@@ -1168,6 +1178,8 @@ total
 =item ConvertDrmsToMp4a
 
 =item DeleteAtom
+
+=item DeleteAtomWithStcoFix
 
 =item DumpTree
 

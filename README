@@ -1,12 +1,25 @@
 NAME
 
-Audio::M4P -- M4P / MP4 / m4a Quicktime audio tools, including DRMS removal tools
+Audio::M4P -- M4P / MP4 / m4a Quicktime audio and video tools, including DRMS removal tools
 
 DESCRIPTION
     
-Slice, dice, deconsruct, markup, and decrypt M4P (Apple Quicktime) audio files
+Slice, dice, deconstruct, markup, and decrypt MP4 / M4P / M4V / M4A (Apple Quicktime) audio and video
 
 SYNOPSIS
+
+
+use Audio::M4P::QuickTime;
+
+my $mp4file = "file.m4p";
+my $qt = new Audio::M4P::QuickTime(file => $mp4file);
+my $tags = $qt->GetMetaInfo;
+print "Artist is $tags->{ARTIST}\n" if $tags->{ARTIST};
+
+my ($track, $count) = $qt->tracks;
+my $new_track_number = 3;
+my $total_tracks_on_CD = 17;
+$qt->tracks($new_track_number, $total_tracks_on_CD);
 
 use Audio::M4P::Decrypt;
 

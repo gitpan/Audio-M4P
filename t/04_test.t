@@ -10,13 +10,8 @@ use Audio::M4P::QuickTime;
 my $qt = new Audio::M4P::QuickTime( file => 't/elise.m4a' );
 isa_ok( $qt, 'Audio::M4P::QuickTime' );
 
-my $meta = $qt->FindAtom('meta');
-my $len = $meta->size;
-my $pos = $meta->start;
-$qt->DeleteAtom('meta');
-$qt->FixStco($len, $pos);
+$qt->DeleteAtomWithStcoFix('meta');
 ok(!$qt->FindAtom('ilst'), "ilst atom removed with meta"); 
-
 
 my ( $title, $comment, $year, $genre, $genre_txt, $track, $track_ct, $album, $artist ) =
   ( "Fourth (Fur Elise) Test Title", "test comment", "1999", 18, "Rock", 5, 20, "My Album", "The Artist" );
