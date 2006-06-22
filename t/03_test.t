@@ -49,3 +49,13 @@ my ( $t, $tt ) = $qt->tracks;
 ok( $t == $track,     "Tracks Tags : track number" );
 ok( $tt == $track_ct, "Tracks Tags : track count" );
 
+$qt = new Audio::M4P::QuickTime( file => 't/moof-ATFC.3g2' );
+$qt->SetMetaInfo('covr', $pic1, 1);
+my $mhash =  {
+  title   => "U Know I Love It (Redline Project Samples With Moof Atoms and Twisted Remix",
+  author  => "Menancing Poodle",
+  album   => "Who Knows Anyway",
+};
+$qt->all_tags( $mhash );
+$qt->WriteFile('t/moof_ATFC_with_meta_data.mp4');
+

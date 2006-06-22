@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 use Crypt::Rijndael;
 use Digest::MD5;
@@ -16,19 +16,19 @@ sub new {
     bless( $self, $class );
     $self->{meta} = {};
     foreach my $k (qw( strHome sPfix dirSep DEBUG DEBUGDUMPFILE )) {
-        $self->{$k} = $args{$k} if $args{$k};
+        $self->{$k} = $args{$k} if exists $args{$k};
     }
-    unless ( $self->{strHome} ) {
+    unless ( exists $self->{strHome} ) {
         if    ( $ENV{APPDATA} ) { $self->{strHome} = $ENV{APPDATA} }
         elsif ( $ENV{HOME} )    { $self->{strHome} = $ENV{HOME} }
         else { $self->{strHome} = '~' }
     }
-    unless ( $self->{sPfix} ) {
+    unless ( exists $self->{sPfix} ) {
         if ( $^O =~ /Win/ ) { $self->{sPfix} = '' }
         else { $self->{sPfix} = '.' }
     }
-    $self->{dirSep} ||= '/';
-    $self->{DEBUG}  ||= 0;
+    $self->{dirSep} = '/' unless exists $self->{dirSep};;
+    $self->{DEBUG}  = 0 unless exists $self->{DEBUG};
     $self->{QTStream} = new Audio::M4P::QuickTime(%args);
     return $self;
 }

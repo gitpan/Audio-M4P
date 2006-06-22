@@ -27,6 +27,7 @@ $qt->tracks( $track, $track_ct );
 open(my $fp1, 't/feel.jpg') or die "File not found";
 binmode $fp1;
 read($fp1, my $pic1, -s $fp1); 
+
 $qt->SetMetaInfo('covr', $pic1, 1);
 
 $qt->WriteFile('t/temp04.m4a');

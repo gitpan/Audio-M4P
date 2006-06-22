@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.30';
+our $VERSION = '0.32';
 
 use Audio::M4P::Atom;
 
@@ -43,8 +43,7 @@ our %tag_types = (
     AAID     => 'aaid',
     ALB      => '©alb',
     ALBUM    => '©alb',
-    ARTIST   => '©art',
-    ART      => '©art',
+    ARTIST   => '©ART',
     CMT      => '©cmt',
     COMMENT  => '©cmt',
     COM      => '©com',
@@ -88,7 +87,7 @@ our %iTMS_dict_meta_types = (
     comments           => '©cmt',
     songName           => '©nam',
     genre              => 'gnre',
-    playlistArtistName => '©art',
+    playlistArtistName => '©ART',
     genreID            => '©gen',
     composerName       => '©wrt',
     playlistName       => '©alb',
@@ -178,6 +177,23 @@ our @genre_strings = (
     "INVALID_GENRE"
 );
 
+our %asset_3GP_types = (
+    ALBUM     => 'albm',      # album title and track number for the media 
+    ARTIST    => 'perf',      # performer or artist 
+    COM       => 'auth',      # author/composer of the media 
+    COMMENT   => 'dscp',      # caption or description for the media
+    COPYRIGHT => 'cprt',       # notice about organisation holding copyright
+    GENRE     => 'gnre',      # genre (category and style) of the media
+    RTNG      => 'rtng',       # media rating 
+    TITLE     => 'titl',      # title for the media 
+    YEAR      => 'yrrc',       # recording year for the media 
+    
+    # these exist in 3GP but not really in iTMS meta data
+    CLASS     => 'clsf',      # classification of the media 
+    KEYWORDS  => 'kywd',      # media keywords 
+    LOCATION  => 'loci',      # location information 
+);    
+
 #------------------- object methods -----------------------------------------#
 
 sub new {
@@ -186,10 +202,10 @@ sub new {
     bless( $self, $class );
     $self->{meta} = {};
     foreach my $k (qw( DEBUG DEBUGDUMPFILE file)) {
-        $self->{$k} = $args{$k} if $args{$k};
+        $self->{$k} = $args{$k} if exists $args{$k};
     }
-    $self->{DEBUG} ||= 0;
-    if ( $self->{file} ) {
+    $self->{DEBUG} = 0 unless exists $self->{DEBUG};
+    if ( exists $self->{file} ) {
         $self->ReadFile( $self->{file} );
         $self->ParseBuffer();
     }
@@ -328,7 +344,9 @@ sub AtomList {
 
 sub FindAtom {
     my ( $self, $type ) = @_;
-    my @atoms = grep { $_->type =~ /$type$/i } @{ $self->AtomList() };
+    my @atoms = grep 
+      { $type and $_->type and $_->type =~ /$type$/i } 
+      @{ $self->AtomList() };
     return @atoms if wantarray;
     return unless scalar @atoms > 0;
     return $atoms[0];
@@ -343,6 +361,8 @@ sub FindAtomData {
 sub MetaInfo {
     my ($self) = @_;
     my $meta_info = '';
+    my $file_type = $self->GetFtype();
+    $meta_info = "File type is $file_type\n" if $file_type;
     while ( my ( $mtype, $mdata ) = each %{ $self->{meta} } ) {
         $meta_info .= "Meta type $mtype, meta data $mdata\n";
     }
@@ -380,7 +400,7 @@ sub FixStco {
     my ( $self, $sinf_sz, $change_position ) = @_;
     my @stco_atoms = $self->FindAtom('stco');
     my @co64_atoms = $self->FindAtom('co64');
-
+    my @tfhd_atoms = $self->FindAtom('tfhd');
     # all Quicktime files should have at least one stco or co64 atom
     croak 'No stco or co64 atom' unless @stco_atoms || @co64_atoms;
     
@@ -424,6 +444,23 @@ sub FixStco {
             pack( 'N*', @samples )
         );
     }
+    foreach my $tfhd (@tfhd_atoms) {
+        my($tf_flags, undef, $offset_high32, $offset_low32) =
+          unpack('NNNN', substr( $self->{buffer}, $tfhd->start + 8, 16 ) );
+        my $offset64 = ( $offset_high32 * ( 2**32 ) ) + $offset_low32;
+        # we only need to adjust if the 1st movie fragment tf_flags bit is set
+        next unless( ($tf_flags % 2) == 1 ); 
+        next if $offset64 < $change_position;
+        $offset64 -= $sinf_sz;
+        $offset_high32 = int( $offset64 / (2**32) + 0.0001 );
+        $offset_low32  = $offset64 % (2**32);
+        substr( 
+            $self->{buffer}, 
+            $tfhd->start + 16,
+            8,
+            pack( 'NN', $offset_high32, $offset_low32 )
+        );
+    }    
 }
 
 sub GetSampleTable {
@@ -453,8 +490,75 @@ sub DeleteAtomWithStcoFix {
     return 1;
 }
 
+sub GetFtype {
+    my($self) = @_;
+    my $atom = $self->FindAtom('ftyp') or return;
+    my $ftyp = substr($atom->data, 0, 4);
+    $ftyp =~ s/^(\S+)\s+$/$1/;
+    return $ftyp;
+}
+
+sub Get3GPInfo {
+    my($self) = @_;
+    while( my($meta_type, $atom_type) = each %asset_3GP_types ) {
+        my $atom = $self->FindAtom($atom_type) or next;
+        my $data = substr($atom->{buffer},$atom->start + 14,$atom->size - 14);
+        $self->{MP4Info}->{$meta_type} = $data;
+    }
+    while ( my ( $tag, $alt_tag ) = each %alternate_tag_types ) {
+        $self->{MP4Info}->{$alt_tag} = $self->{MP4Info}->{$tag}
+          if exists $self->{MP4Info}->{$tag};
+    }  
+    my $file_type = $self->GetFtype();
+    $self->{MP4Info}->{FTYP} = $file_type if $file_type;
+    return $self->{MP4Info};
+}
+
+sub Set3GPInfo {
+    my( $self, $field, $value, $delete_old ) = @_;
+    my $asset_type = $asset_3GP_types{$field};
+    my $moov = $self->FindAtom('moov') or croak "No moov atom found";
+    my($asset, $udta);
+    foreach my $typ (values %asset_3GP_types ) {
+        $asset = $self->FindAtom($typ) or next;
+        $udta = $asset->GetParent();
+        last if $udta and $udta->{type} =~ /udta/i;
+        $udta = 0;
+    }
+    # if cannot find any asset atoms, look for the udta child of moov
+    $udta = $moov->DirectChildren('udta') unless $udta;
+    # if no direct child of moov udta, make one
+    unless($udta) {
+        $moov->insertNew( 'udta', '' );
+        $self->FixStco( -8, $moov->start );
+        $udta = $moov->Contained('udta');
+    }
+    my $entry = $udta->Contained($asset_type);
+    my $diff  = 0;
+    if ( $entry and $delete_old ) {
+        my @unwanted = $udta->Contained($asset_type);
+        foreach my $u (@unwanted) {
+            $diff += $u->size;
+            $u->selfDelete;
+        }
+    }
+    # now we can add the data
+    # we set language code to 'eng'
+    my $lang = 'eng';
+    my $packed_lang = asset_language_pack_iso_639_2T($lang);
+    my $data_packet = pack('Nn', 0,  $packed_lang) . $value;
+    my $new_atom = $udta->insertNew( $asset_type, $data_packet );
+    $diff -= $new_atom->size;
+    $self->FixStco( $diff, $udta->start );
+    return $new_atom;
+}        
+
 sub GetMetaInfo {
     my ( $self, $as_text ) = @_;
+    
+    # if we have a 3gp file, dispatch
+    return $self->Get3GPInfo() if $self->GetFtype() =~ /^3g/;
+    
     my %meta_tags;
     while ( my ( $meta_tag, $type ) = each %tag_types ) {
         $type =~ s/\W//g;
@@ -510,6 +614,7 @@ sub GetMetaInfo {
               $genre_strings[ $self->{MP4Info}->{GENRE} - 1 ];
         }
     }
+    $self->{MP4Info}->{FTYP} = $self->GetFtype();
     return $self->{MP4Info};
 }
 
@@ -546,6 +651,11 @@ sub GetMP4Info {
 sub SetMetaInfo {
     my ( $self, $field, $value, $delete_old, $before, $as_text ) = @_;
     $self->GetMetaInfo;    # fill default fields like TRACKCOUNT
+    
+    # if we have a 3gp file, dispatch
+    return $self->Set3GPInfo( $self, $field, $value, $delete_old ) 
+      if $self->GetFtype() =~ /^3g/;;
+    
     my $type = $tag_types{$field} || lc substr( $field, 0, 4 );
     my $ilst = $self->FindAtom('ilst') || $self->MakeIlstAtom || return;
     my $typ = $type;
@@ -591,24 +701,13 @@ sub SetMetaInfo {
     $self->FixStco( $diff, $ilst->start );
 }
 
+
 sub MakeIlstAtom {
     my ($self) = @_;
-    my $moov       = $self->FindAtom('moov') or croak "No moov atom found";
-    my @udta_atoms = $moov->Contained('udta');
-    my $udta;
-
-    # we want the udta atom which contains user info about moov as a whole
-    # see http://developer.apple.com/documentation/QuickTime/QTFF/QTFFChap2/chapter_3_section_2.html
-    foreach my $u (@udta_atoms) {
-        my $parent      = $u->parent;
-        my $parent_atom = $parent->getNodeValue();
-        if ( $parent_atom->type =~ /moov/ ) {
-            $udta = $u;
-            last;
-        }
-    }
-    
-    # if no udta, make one under moov
+    my $moov = $self->FindAtom('moov') or croak "No moov atom found";
+    my $udta = $moov->DirectChildren('udta');
+  
+    # if no udta under moov, make one under moov
     unless($udta) {
         $moov->insertNew( 'udta', '' );
         $self->FixStco( -8, $moov->start );
@@ -860,6 +959,13 @@ sub genre_num_to_genre_text {
     return unless $num > 0 and $num <= scalar @genre_strings;
     return $genre_strings[ $num - 1 ];
 }
+
+sub asset_language_pack_iso_639_2T {
+    my($lang3chars) = @_;
+    my( $c1, $c2, $c3 ) = map { $_ ? ord($_) - 60 : 0 } split (//, $lang3chars);
+    return ($c1 * (2 ** 10)) + ($c2 * (2 ** 5)) + $c3;
+}
+
 
 =head1 NAME
 
@@ -1208,6 +1314,14 @@ total
 =item genre_text_to_genre_num
 
 =item isMetaDataType
+
+=item Get3GPInfo
+
+=item GetFtype
+
+=item Set3GPInfo
+
+=item asset_language_pack_iso_639_2T
 
 =back
 

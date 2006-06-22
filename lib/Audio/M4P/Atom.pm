@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -16,7 +16,7 @@ my %container_atom_types = (
     akid   => 1,
     '©alb' => 1,
     apid   => 1,
-    '©art' => 1,
+    '©ART' => 1,    
     atid   => 1,
     clip   => 1,
     '©cmt' => 1,
@@ -39,6 +39,7 @@ my %container_atom_types = (
     mdia   => 1,
     meta   => 1,
     minf   => 1,
+    moof   => 1,
     moov   => 1,
     '©nam' => 1,
     plid   => 1,
@@ -49,6 +50,7 @@ my %container_atom_types = (
     stik   => 1,
     tmpo   => 1,
     '©too' => 1,
+    traf   => 1,
     trak   => 1,
     trkn   => 1,
     udta   => 1,
@@ -80,8 +82,10 @@ my %noncontainer_atom_types = (
     stsd   => 1,
     stp    => 1,
     stts   => 1,
+    tfhd   => 1,
     tkhd   => 1,
     tref   => 1,
+    trun   => 1,
     user   => 1,
     vmhd   => 1,
     wide   => 1,
@@ -107,10 +111,10 @@ sub new {
     my $self = \%args;
     bless( $self, $class );
     $self->{node} = Tree::Simple->new($self);
-    $self->{parent} ||= 0;
+    $self->{parent} = 0 unless exists $self->{parent};
     $self->{parent}->addChild( $self->{node} ) if ref $self->{parent};
     $self->read_buffer( $self->{read_buffer} ) 
-      if defined $self->{read_buffer} and $self->{rbuf};
+      if exists $self->{read_buffer} and exists $self->{rbuf};
     return $self;
 }
 
@@ -306,7 +310,7 @@ sub insertNew {
     $atom->{size}   = 8 + length $data;
     $atom->{type}   = $type;
     $atom->redoStarts( $atom->{size}, $atom->{start} );
-    my $buf = pack( 'Na4', $atom->{size}, $type ) . $data;
+    my $buf = pack( 'Na4', $atom->{size}, $type ? $type : 'junk' ) . $data;
     substr( ${ $self->{rbuf} }, $atom->{start}, 0, $buf );
     $self->size( $self->{size} + $atom->{size} );
     $self->resizeContainers( $atom->{size} );
@@ -357,6 +361,25 @@ sub Contained {
 sub isContainer {
     my ($self) = @_;
     return $container_atom_types{ $self->{type} };
+}
+
+sub ParentAtom {
+    my($self) = @_;
+    my $parent = $self->{parent};
+    return unless ref $parent;
+    return $parent->getNodeValue();
+}
+
+sub DirectChildren {
+    my ( $self, $type ) = @_;
+    my @kids = $self->Contained($type);   
+    my @results;
+    foreach my $a (@kids) {
+        push @results, $a if $a->ParentAtom() eq $self;
+    }
+    return @results if wantarray;
+    return unless scalar @results > 0;
+    return $results[0];
 }
 
 sub print {
