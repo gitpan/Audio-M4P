@@ -1,5 +1,8 @@
 Revision history for Perl modules under Audio::M4P
 
+0.33  Sun 9 July 2006
+    - added a 0.32 distro missing (from MANIFEST) 3gp video test file
+
 0.32  Tue 20 June 2006
     - added some preliminary support for 3GP type files (cell phone video)
     - ARTIST tag was not always being capitalized properly, fixed
