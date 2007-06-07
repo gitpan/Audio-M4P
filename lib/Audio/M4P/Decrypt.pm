@@ -105,7 +105,6 @@ Originally derived from the DeDRMS.cs program by Jon Lech Johansen
  my $deDRMS = new Audio::M4P::Decrypt;
  $deDRMS->DeDRMS($mp4file, $outfile);
 
-See also the M4pDecrypt.pl example program in this distribution.
 
 =head1 METHODS
 

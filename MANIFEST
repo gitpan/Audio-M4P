@@ -7,11 +7,13 @@ lib/Audio/M4P.pm
 lib/Audio/M4P/Decrypt.pm
 lib/Audio/M4P/QuickTime.pm
 lib/Audio/M4P/Atom.pm
-bin/M4pDecrypt.PL
 t/01_test.t
 t/02_test.t
 t/03_test.t
 t/04_test.t
+t/05_test.t
+t/06_test.t
+t/07_test.t
 t/elise.m4a
 t/elisepic1.jpg
 t/elisepic2.jpg
@@ -21,5 +23,6 @@ t/64bit_mdat.mp4
 t/64bit_mutt.mp4
 t/moof-ATFC.3g2
 t/booka.mp4
+t/emotre.m4a
 Makefile.PL
 META.yml                                 Module meta-data (added by MakeMaker)

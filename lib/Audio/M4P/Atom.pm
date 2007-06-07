@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.31';
+our $VERSION = '0.34';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -216,15 +216,16 @@ sub offset {
 sub data {
     my ( $self, $newdata ) = @_;
     if ( defined $newdata ) {
-        my $newsize = length $newdata + 8;
+        my $newsize = (length $newdata) + 8;
         my $diff    = $newsize - $self->{size};
-        $self->{size} = $newsize;
+        $self->resizeContainers($diff);
         substr(
-            $$self->{rbuf},
+            ${ $self->{rbuf} },
             $self->{start} + $self->{offset},
             $self->{size} - $self->{offset}, $newdata
         );
-        $self->redoStarts($diff);
+        $self->size($newsize);
+        $self->redoStarts($diff, $self->{start});
     }
     return substr(
         ${ $self->{rbuf} },

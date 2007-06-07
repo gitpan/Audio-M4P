@@ -1,16 +1,19 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Audio-M4P
-version:      0.33
-version_from: lib/Audio/M4P/QuickTime.pm
-installdirs:  site
-requires:
+--- #YAML:1.0
+name:                Audio-M4P
+version:             0.34
+abstract:            Perl M4P/MP4/M4a audio tools, include DRMS tools
+license:             ~
+generated_by:        ExtUtils::MakeMaker version 6.32
+distribution_type:   module
+requires:     
     Crypt::Rijndael:               0
     Digest::MD5:                   0
     Test::More:                    0
     Tree::Simple:                  0
     Tree::Simple::View::HTML:      0
     Tree::Simple::Visitor:         0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
+    version: 1.2
+author:
+    - William Hererra (whererra@skylightview.com)
