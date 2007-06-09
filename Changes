@@ -1,5 +1,8 @@
 Revision history for Perl modules under Audio::M4P
 
+0.341 Sat 9 June 2007
+    - POD fixes
+
 0.34  Mon 4 June 2007
     - changed Audio::M4P::Atom::data method to allow stripping of ID data from
       'unprotected' iTMS files (this was contributed by Stefano Santoro--thanks)

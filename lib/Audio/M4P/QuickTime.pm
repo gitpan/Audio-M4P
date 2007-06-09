@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.34';
+our $VERSION = '0.341';
 
 use Audio::M4P::Atom;
 
