@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.35';
+our $VERSION = '0.351';
 
 use Audio::M4P::Atom;
 
@@ -1293,7 +1293,7 @@ total
 =item B<CleanAppleM4aPersonalData>
 
   my $file_name = "mp4aIDfile.m4a";
-  my $qt = Audio::M4P::QuickTime->new($file_name);
+  my $qt = Audio::M4P::QuickTime->new(file => $file_name);
   $qt->CleanAppleM4aPersonalData();
   $qt->WriteFile('cleaned' . $file_name);
 
