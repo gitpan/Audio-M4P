@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.341';
+our $VERSION = '0.35';
 
 use Audio::M4P::Atom;
 
@@ -81,6 +81,7 @@ our %alternate_tag_types = (
 );
 
 our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- );
+our @apple_user_id_atoms = qw( apID cprt cnID atID plID geID sfID akID purd );
 
 our %iTMS_dict_meta_types = (
     copyright          => 'cprt',
@@ -488,6 +489,18 @@ sub DeleteAtomWithStcoFix {
     $atom->selfDelete() or return;
     $self->FixStco( $siz, $pos );
     return 1;
+}
+
+sub CleanAppleM4aPersonalData {
+    my($self) = @_;
+    my $mp4a = $self->FindAtom("mp4a") or return;
+    my $old_size = $mp4a->size;
+    my $trunc_data = unpack("H158", $mp4a->data);
+    foreach my $unwanted ( @apple_user_id_atoms ) {
+        $self->DeleteAtomWithStcoFix($unwanted);
+    }
+    $mp4a->data( pack("H158", $trunc_data ));
+    $self->FixStco( $old_size - $mp4a->size, $mp4a->start);
 }
 
 sub GetFtype {
@@ -969,7 +982,7 @@ sub asset_language_pack_iso_639_2T {
 
 =head1 NAME
 
-Audio::M4P::QuickTime -- Perl module for m4p/mp4/m4a Quicktime audio files
+Audio::M4P::QuickTime -- Perl M4P/MP4/M4a audio tools, now strips personal ID information from Apple .m4a files (ALPHA)
 
 =head1 DESCRIPTION
 
@@ -1270,6 +1283,21 @@ total
 =item setTracks    tracks
 
 =item setTotal     total tracks
+
+=back
+
+=head2 Apple m4a personal data removal function
+
+=over 4
+
+=item B<CleanAppleM4aPersonalData>
+
+  my $file_name = "mp4aIDfile.m4a";
+  my $qt = Audio::M4P::QuickTime->new($file_name);
+  $qt->CleanAppleM4aPersonalData();
+  $qt->WriteFile('cleaned' . $file_name);
+
+Remove personal identifiers from Apple's iTMS .m4a format files.
 
 =back
 

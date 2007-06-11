@@ -1,5 +1,11 @@
 Revision history for Perl modules under Audio::M4P
 
+0.35  Sun 10 June 2007
+    -added the Audi::M4P::QuickTime::CleanAppleM4aPersonalData method, which
+      now strips personal ID information from Apple .m4a files (ALPHA)
+      NOTE: this function was largely suggested and contributed by 
+        Stefano Santoro--thanks!
+      
 0.341 Sat 9 June 2007
     - POD fixes
 
