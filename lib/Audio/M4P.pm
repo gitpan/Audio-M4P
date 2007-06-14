@@ -4,7 +4,7 @@ use strict;
 
 =head1 NAME
 
-Audio::M4P -- Perl QuickTime / MP4 tools, now (alpha) strips personal ID information from Apple .m4a filea
+Audio::M4P -- Perl QuickTime / MP4 / iTunes Music Store audio file tools
 
 =head1 DESCRIPTION
     

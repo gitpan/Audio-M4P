@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.34';
+our $VERSION = '0.36';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -42,6 +42,7 @@ my %container_atom_types = (
     moof   => 1,
     moov   => 1,
     '©nam' => 1,
+    pinf   => 1,
     plid   => 1,
     rtng   => 1,
     schi   => 1,

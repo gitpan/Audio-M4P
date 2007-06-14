@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.351';
+our $VERSION = '0.36';
 
 use Audio::M4P::Atom;
 
@@ -17,6 +17,7 @@ our %meta_info_types = (
     apid   => 1,    # apple id
     '©ART' => 1,    # artist (performing)
     atid   => 1,    # apple itunes id ?
+    catg   => 1,    # category
     '©cmt' => 1,    # comment field
     '©com' => 1,    # composer
     covr   => 1,    # cover art
@@ -27,14 +28,23 @@ our %meta_info_types = (
     geid   => 1,    # iTMS store ID ?
     gnre   => 1,    # genre
     '©grp' => 1,    # group(?)
+    '©lyr' => 1,    # lyrics
     '©nam' => 1,    # title of track
+    pcst   => 1,    # podcast flag
+    pgap   => 1,    # iTunes gapless playback ?
+    pinf   => 1,    # iTunes 7.2+ purchaser info ?
     plid   => 1,    # purchase id ?
+    purd   => 1,    # iTunes 6+ purchase date 
+    purl   => 1,    # program URL 
     rtng   => 1,    # rating (integer)
+    sfid   => 1,    # ? itms ID info
     stik   => 1
     ,  # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show, ?? 0x2 newsreel
     tmpo   => 1,    # tempo (beats per minute)
     '©too' => 1,    # encoder
     trkn   => 1,    # two fields: [field 1] track num. of [field 2] total tracks
+    tves   => 1,    # TV show episode
+    tvsh   => 1,    # TV show
     '©wrt' => 1,    # composer
     '----' => 1,    # itunes specific info
 );
@@ -81,7 +91,7 @@ our %alternate_tag_types = (
 );
 
 our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- );
-our @apple_user_id_atoms = qw( apID cprt cnID atID plID geID sfID akID purd );
+our @apple_user_id_atoms = qw( apID cnID atID plID geID sfID akID purd pinf );
 
 our %iTMS_dict_meta_types = (
     copyright          => 'cprt',
@@ -264,6 +274,7 @@ sub ParseMP4Container {
         last unless $atom->size > 7;    # sanity check
         $self->{atom_count}++;
         if    ( $atom->type =~ /stsd/i ) { $self->ParseStsd($atom) }
+        elsif ( $atom->type =~ /mp4a/i ) { $self->ParseMp4a($atom) }
         elsif ( $atom->type =~ /drms/i ) { $self->ParseDrms($atom) }
         elsif ( $atom->type =~ /meta/i ) { $self->ParseMeta($atom) }
         elsif ( $atom->isContainer() ) {
@@ -290,6 +301,15 @@ sub ParseStsd {
         $stsd->start + $stsd->size - 16
     );
 }
+
+sub ParseMp4a {
+    my ( $self, $mp4a ) = @_;
+    $self->ParseMP4Container(
+        $mp4a->node,
+        $mp4a->start + 36,
+        $mp4a->start + $mp4a->size - 36
+    );
+}    
 
 sub ParseDrms {
     my ( $self, $drms ) = @_;
@@ -494,13 +514,13 @@ sub DeleteAtomWithStcoFix {
 sub CleanAppleM4aPersonalData {
     my($self) = @_;
     my $mp4a = $self->FindAtom("mp4a") or return;
-    my $old_size = $mp4a->size;
-    my $trunc_data = unpack("H158", $mp4a->data);
+#    my $old_size = $mp4a->size;
+#    my $trunc_data = unpack("H158", $mp4a->data);
     foreach my $unwanted ( @apple_user_id_atoms ) {
         $self->DeleteAtomWithStcoFix($unwanted);
     }
-    $mp4a->data( pack("H158", $trunc_data ));
-    $self->FixStco( $old_size - $mp4a->size, $mp4a->start);
+#    $mp4a->data( pack("H158", $trunc_data ));
+#    $self->FixStco( $old_size - $mp4a->size, $mp4a->start);
 }
 
 sub GetFtype {

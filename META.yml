@@ -1,7 +1,7 @@
 --- #YAML:1.0
 name:                Audio-M4P
-version:             0.351
-abstract:            Perl M4P/MP4/M4a video and audio meia file tools, now (alpha) strips personal ID information from Apple .m4a files
+version:             0.36
+abstract:            Perl M4P/MP4/M4a video and audio media file tools
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.32
 distribution_type:   module
