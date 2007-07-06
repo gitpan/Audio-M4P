@@ -1,5 +1,8 @@
 Revision history for Perl modules under Audio::M4P
 
+0.37  Thu 5 July 2007
+   - POD revision and miscellaneous minor code tweaks
+
 0.36  Wed 13 June 2007
     - added code to parse the new iTunes Plus mp4a atom with its 'pinf' atom
     - polished the CleanAppleM4aPersonalData method to reflect the mp4a parsing

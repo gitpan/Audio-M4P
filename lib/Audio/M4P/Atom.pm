@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
@@ -41,6 +41,7 @@ my %container_atom_types = (
     minf   => 1,
     moof   => 1,
     moov   => 1,
+    mp4a   => 1,
     '©nam' => 1,
     pinf   => 1,
     plid   => 1,
@@ -59,6 +60,7 @@ my %container_atom_types = (
 );
 
 my %noncontainer_atom_types = (
+    chtb   => 1,
     ctts   => 1,
     data   => 1,
     esds   => 1,
@@ -71,13 +73,13 @@ my %noncontainer_atom_types = (
     'key ' => 1,
     mdat   => 1,
     mdhd   => 1,
-    mp4a   => 1,
     mp4s   => 1,
     mpv4   => 1,
     mvhd   => 1,
     name   => 1,
     priv   => 1,
     rtp    => 1,
+    sign   => 1, 
     stco   => 1,
     stsc   => 1,
     stsd   => 1,

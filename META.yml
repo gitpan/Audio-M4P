@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Audio-M4P
-version:             0.36
+version:             0.37
 abstract:            Perl M4P/MP4/M4a video and audio media file tools
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.32

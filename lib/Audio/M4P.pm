@@ -4,7 +4,7 @@ use strict;
 
 =head1 NAME
 
-Audio::M4P -- Perl QuickTime / MP4 / iTunes Music Store audio file tools
+Audio::M4P -- Perl QuickTime / MP4 / iTunes Music Store audio / video file tools
 
 =head1 DESCRIPTION
     

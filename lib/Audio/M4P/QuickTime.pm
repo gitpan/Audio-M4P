@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 use Audio::M4P::Atom;
 
@@ -38,6 +38,7 @@ our %meta_info_types = (
     purl   => 1,    # program URL 
     rtng   => 1,    # rating (integer)
     sfid   => 1,    # ? itms ID info
+    sign   => 1,    # ? file hash signature
     stik   => 1
     ,  # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show, ?? 0x2 newsreel
     tmpo   => 1,    # tempo (beats per minute)
@@ -91,7 +92,7 @@ our %alternate_tag_types = (
 );
 
 our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- );
-our @apple_user_id_atoms = qw( apID cnID atID plID geID sfID akID purd pinf );
+our @apple_user_id_atoms = qw( pinf apID cnID atID plID geID sfID akID purd );
 
 our %iTMS_dict_meta_types = (
     copyright          => 'cprt',
@@ -514,13 +515,9 @@ sub DeleteAtomWithStcoFix {
 sub CleanAppleM4aPersonalData {
     my($self) = @_;
     my $mp4a = $self->FindAtom("mp4a") or return;
-#    my $old_size = $mp4a->size;
-#    my $trunc_data = unpack("H158", $mp4a->data);
     foreach my $unwanted ( @apple_user_id_atoms ) {
         $self->DeleteAtomWithStcoFix($unwanted);
     }
-#    $mp4a->data( pack("H158", $trunc_data ));
-#    $self->FixStco( $old_size - $mp4a->size, $mp4a->start);
 }
 
 sub GetFtype {
@@ -1002,7 +999,7 @@ sub asset_language_pack_iso_639_2T {
 
 =head1 NAME
 
-Audio::M4P::QuickTime -- Perl M4P/MP4/M4a audio tools, now strips personal ID information from Apple .m4a files (ALPHA)
+Audio::M4P::QuickTime -- Perl M4P/MP4/M4a audio / video tools
 
 =head1 DESCRIPTION
 
@@ -1316,6 +1313,82 @@ total
   my $qt = Audio::M4P::QuickTime->new(file => $file_name);
   $qt->CleanAppleM4aPersonalData();
   $qt->WriteFile('cleaned' . $file_name);
+  
+...OR...
+
+  #!/usr/bin/perl 
+
+  use Tk;
+  use Cwd;
+  use strict;
+  use warnings;
+  use Audio::M4P::QuickTime;
+
+  my $backup_requested = "yes";
+
+  my $win = new MainWindow;
+  my $frm = $win->Frame()->pack;
+  $frm->Label( 
+    -text => "Anonymize Apple iTunes Plus .m4a Files",
+    -font => "Garamond 20 bold",
+  )->pack;
+
+  my $do_backup_choice = $frm->Radiobutton(
+    -text  => "Back Up (append .old.m4a to old files)",
+    -value => 'yes',
+    -variable => \$backup_requested,
+    -font => "Garamond 14 bold",
+  )->pack;
+
+  my $do_no_backup_choice = $frm->Radiobutton(
+    -text     => "Do Not Back Up (files will be over-written!)",
+    -value    => 'no',
+    -variable => \$backup_requested,
+    -font => "Garamond 14 bold",
+  )->pack;
+
+  my $convert_button = $win->Button(
+    -text    => "Convert Files",
+    -command => \&push_button,
+    -font => "Garamond 17 bold",
+  )->pack;
+
+  my $exit_button = $win->Button(
+    -text    => "Exit",
+    -command => sub { exit 0 },
+    -font => "Garamond 17 bold",
+  )->pack;
+
+  MainLoop;
+
+  sub push_button {
+    my $write_extension = $backup_requested eq 'no' ? '' : '.old.m4a';
+    my @file_list = $win->getOpenFile(
+        -defaultextension => ".pl",
+        -filetypes        => [ [ 'MP4a files', '.m4a', ], [ 'All Files', '*', ], ],
+        -initialdir       => Cwd::cwd(),
+        -initialfile      => "getopenfile",
+        -title    => "Choose Purchased Apple iTunes Plus Files to Anonymize",
+        -multiple => 1,
+    );
+
+    foreach my $filename (@file_list) {
+        my $qt = Audio::M4P::QuickTime->new( file => $filename );
+        if ( $qt->FindAtom("mp4a") ) {
+            $qt->CleanAppleM4aPersonalData();
+            rename( $filename, $filename . $write_extension );
+            $qt->WriteFile($filename);
+        }
+        else {
+            $win->messageBox(
+                -message => "Error: $filename is not a valid m4a file.",
+                -type    => 'ok',
+                -icon    => 'error'
+            );
+        }
+    }
+  }
+
 
 Remove personal identifiers from Apple's iTMS .m4a format files.
 
