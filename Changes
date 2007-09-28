@@ -1,5 +1,9 @@
 Revision history for Perl modules under Audio::M4P
 
+0.38 Thu 27 Sep 2007
+    - fixed a circular reference memory leak in the parse tree, 
+      thanks to Paul S. for finding the bug
+
 0.37  Thu 5 July 2007
    - POD revision and miscellaneous minor code tweaks
 

@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 use Audio::M4P::Atom;
 
@@ -222,6 +222,12 @@ sub new {
         $self->ParseBuffer();
     }
     return $self;
+}
+
+sub DESTROY {
+    my($self) = @_;
+    $self->{root}->{node}->DESTROY if $self->{root};
+    undef $self->{buffer} if defined $self->{buffer};
 }
 
 sub ReadFile {

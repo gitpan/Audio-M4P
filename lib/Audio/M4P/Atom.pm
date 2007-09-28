@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 use Tree::Simple;
 use Tree::Simple::Visitor;
