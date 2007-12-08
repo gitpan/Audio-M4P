@@ -4,54 +4,76 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.38';
+our $VERSION = '0.40';
 
 use Audio::M4P::Atom;
 
 #-------------- useful hashes and arrays ------------------------------------#
 
 our %meta_info_types = (
+    aART   => 1,   # album artist
+    aaid   => 1,   # album artist
+    '©alb' => 1,   # album
+    akid   => 1,   # ? alternate id ?
+    apid   => 1,   # apple id
+    '©ART' => 1,   # artist (performing)
+    atid   => 1,   # apple itunes id ?
+    catg   => 1,   # category
+    '©cmt' => 1,   # comment field
+    '©com' => 1,   # composer
+    covr   => 1,   # cover art
+    cpil   => 1,   # 1 if compilation => 0 if not ?
+    cprt   => 1,   # copyrighted material purchaser ?
+    '©day' => 1,   # date of release--often just the year
+    disk   => 1,   # CD set number: cut is from, disk [field 1] of [field 2]
+    geid   => 1,   # iTMS store ID ?
+    gnre   => 1,   # genre
+    '©grp' => 1,   # group(?)
+    '©lyr' => 1,   # lyrics
+    '©nam' => 1,   # title of track
+    pcst   => 1,   # podcast flag
+    pgap   => 1,   # iTunes gapless playback ?
+    pinf   => 1,   # iTunes 7.2+ purchaser info ?
+    plid   => 1,   # purchase id ?
+    purd   => 1,   # iTunes 6+ purchase date
+    purl   => 1,   # program URL
+    rtng   => 1,   # rating (integer)
+    sfid   => 1,   # ? itms ID info
+    sign   => 1,   # ? file hash signature
+    stik   => 1,   # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video,
+                   # 0xA TV show, ?? 0x2 newsreel, 0xE ringtone
+    tmpo   => 1,   # tempo (beats per minute)
+    '©too' => 1,   # encoder
+    trkn   => 1,   # two fields: [field 1] track num. of [field 2] total tracks
+    tves   => 1,   # TV show episode
+    tvsh   => 1,   # TV show
+    '©wrt' => 1,   # composer
+    '----' => 1,   # itunes specific info
+);
+
+our %utf8_atoms = (
+    aART   => 1,    # album artist
     aaid   => 1,    # album artist
     '©alb' => 1,    # album
-    akid   => 1,    # ? alternate id ?
-    apid   => 1,    # apple id
     '©ART' => 1,    # artist (performing)
-    atid   => 1,    # apple itunes id ?
     catg   => 1,    # category
     '©cmt' => 1,    # comment field
     '©com' => 1,    # composer
-    covr   => 1,    # cover art
-    cpil   => 1,    # 1 if compilation => 0 if not ?
     cprt   => 1,    # copyrighted material purchaser ?
     '©day' => 1,    # date of release--often just the year
-    disk   => 1,    # CD set number: cut is from, disk [field 1] of [field 2]
-    geid   => 1,    # iTMS store ID ?
-    gnre   => 1,    # genre
     '©grp' => 1,    # group(?)
     '©lyr' => 1,    # lyrics
     '©nam' => 1,    # title of track
-    pcst   => 1,    # podcast flag
-    pgap   => 1,    # iTunes gapless playback ?
-    pinf   => 1,    # iTunes 7.2+ purchaser info ?
-    plid   => 1,    # purchase id ?
-    purd   => 1,    # iTunes 6+ purchase date 
-    purl   => 1,    # program URL 
-    rtng   => 1,    # rating (integer)
-    sfid   => 1,    # ? itms ID info
-    sign   => 1,    # ? file hash signature
-    stik   => 1
-    ,  # movie type: 0x1 default, 0x5 bookmarkable, 0x6 music video, 0xA TV show, ?? 0x2 newsreel
-    tmpo   => 1,    # tempo (beats per minute)
+    purl   => 1,    # program URL
     '©too' => 1,    # encoder
-    trkn   => 1,    # two fields: [field 1] track num. of [field 2] total tracks
     tves   => 1,    # TV show episode
     tvsh   => 1,    # TV show
     '©wrt' => 1,    # composer
-    '----' => 1,    # itunes specific info
 );
 
 our %tag_types = (
     AAID     => 'aaid',
+    AAID     => 'aART',
     ALB      => '©alb',
     ALBUM    => '©alb',
     ARTIST   => '©ART',
@@ -190,21 +212,21 @@ our @genre_strings = (
 );
 
 our %asset_3GP_types = (
-    ALBUM     => 'albm',      # album title and track number for the media 
-    ARTIST    => 'perf',      # performer or artist 
-    COM       => 'auth',      # author/composer of the media 
-    COMMENT   => 'dscp',      # caption or description for the media
-    COPYRIGHT => 'cprt',       # notice about organisation holding copyright
-    GENRE     => 'gnre',      # genre (category and style) of the media
-    RTNG      => 'rtng',       # media rating 
-    TITLE     => 'titl',      # title for the media 
-    YEAR      => 'yrrc',       # recording year for the media 
-    
+    ALBUM     => 'albm',    # album title and track number for the media
+    ARTIST    => 'perf',    # performer or artist
+    COM       => 'auth',    # author/composer of the media
+    COMMENT   => 'dscp',    # caption or description for the media
+    COPYRIGHT => 'cprt',    # notice about organisation holding copyright
+    GENRE     => 'gnre',    # genre (category and style) of the media
+    RTNG      => 'rtng',    # media rating
+    TITLE     => 'titl',    # title for the media
+    YEAR      => 'yrrc',    # recording year for the media
+
     # these exist in 3GP but not really in iTMS meta data
-    CLASS     => 'clsf',      # classification of the media 
-    KEYWORDS  => 'kywd',      # media keywords 
-    LOCATION  => 'loci',      # location information 
-);    
+    CLASS    => 'clsf',     # classification of the media
+    KEYWORDS => 'kywd',     # media keywords
+    LOCATION => 'loci',     # location information
+);
 
 #------------------- object methods -----------------------------------------#
 
@@ -221,15 +243,16 @@ sub new {
         $self->ReadFile( $self->{file} );
         $self->ParseBuffer();
     }
-    return $self;
+    return $self;    
 }
-
+ 
 sub DESTROY {
     my($self) = @_;
-    $self->{root}->{node}->DESTROY if $self->{root};
-    undef $self->{buffer} if defined $self->{buffer};
+    if( ref $self->{root} ) {
+        $self->{root}->DESTROY;
+    }
 }
-
+ 
 sub ReadFile {
     my ( $self, $infile ) = @_;
     open( my $infh, '<', $infile ) or croak "Cannot open input $infile: $!";
@@ -272,9 +295,9 @@ sub ParseMP4Container {
     $end_posit = $pAtom->start + $pAtom->size   unless $end_posit;
     while ( $posit < $end_posit ) {
         my $atom = new Audio::M4P::Atom(
-            parent      => $parent,
-            rbuf        => \$self->{buffer},
-            read_buffer => $posit
+            parent               => $parent,
+            rbuf                 => \$self->{buffer},
+            read_buffer_position => $posit
         );
         print $atom->type, " at $posit size ", $atom->size, "\n"
           if $self->{DEBUG};
@@ -316,7 +339,7 @@ sub ParseMp4a {
         $mp4a->start + 36,
         $mp4a->start + $mp4a->size - 36
     );
-}    
+}
 
 sub ParseDrms {
     my ( $self, $drms ) = @_;
@@ -327,7 +350,7 @@ sub ParseDrms {
     );
     $self->{userID} = unpack 'N*', $self->FindAtomData('user');
     my $key = $self->FindAtomData('key');
-    $self->{keyID}  = unpack 'N*', $key   if $key;
+    $self->{keyID} = unpack 'N*', $key if $key;
     $self->{priv} = $self->FindAtomData('priv');
     my $name = $self->FindAtomData('name');
     $self->{name} = substr( $name, 0, index( $name, "\0" ) );
@@ -372,8 +395,8 @@ sub AtomList {
 
 sub FindAtom {
     my ( $self, $type ) = @_;
-    my @atoms = grep 
-      { $type and $_->type and $_->type =~ /$type$/i } 
+    my @atoms =
+      grep { $type and $_->type and $_->type =~ /$type$/i }
       @{ $self->AtomList() };
     return @atoms if wantarray;
     return unless scalar @atoms > 0;
@@ -387,7 +410,7 @@ sub FindAtomData {
 }
 
 sub MetaInfo {
-    my ($self) = @_;
+    my ($self)    = @_;
     my $meta_info = '';
     my $file_type = $self->GetFtype();
     $meta_info = "File type is $file_type\n" if $file_type;
@@ -429,9 +452,10 @@ sub FixStco {
     my @stco_atoms = $self->FindAtom('stco');
     my @co64_atoms = $self->FindAtom('co64');
     my @tfhd_atoms = $self->FindAtom('tfhd');
+
     # all Quicktime files should have at least one stco or co64 atom
     croak 'No stco or co64 atom' unless @stco_atoms || @co64_atoms;
-    
+
     # if mdat is before change postion will not need to do anything
     my @mdat = $self->FindAtom('mdat') or return;
     my $all_mdat_before = 1;
@@ -439,10 +463,10 @@ sub FixStco {
         $all_mdat_before = 0 if $mdt->start > $change_position;
     }
     return if $all_mdat_before;
-    
+
     foreach my $stco (@stco_atoms) {
         my @samples =
-          map { ($_ > $change_position) ? $_ - $sinf_sz : $_ }
+          map { ( $_ > $change_position ) ? $_ - $sinf_sz : $_ }
           unpack( "N*",
             substr( $self->{buffer}, $stco->start + 16, $stco->size - 16 ) );
         substr(
@@ -458,12 +482,12 @@ sub FixStco {
             substr( $self->{buffer}, $co64->start + 16, $co64->size - 16 ) );
         my $num_longs = scalar @samples;
         for ( my $i = 0 ; $i < $num_longs ; $i += 2 ) {
-            my $high32bits = $samples[ $i ];
-            my $low32bits = $samples[ $i + 1 ];
-            my $offset64 = ( $high32bits * ( 2**32 ) ) + $low32bits;
+            my $high32bits = $samples[$i];
+            my $low32bits  = $samples[ $i + 1 ];
+            my $offset64   = ( $high32bits * ( 2**32 ) ) + $low32bits;
             $offset64 -= $sinf_sz if $offset64 > $change_position;
-            $samples[$i + 1] = $offset64 % (2**32);
-            $samples[ $i ] = int($offset64 / (2**32) + 0.0001);
+            $samples[ $i + 1 ] = $offset64 % ( 2**32 );
+            $samples[$i] = int( $offset64 / ( 2**32 ) + 0.0001 );
         }
         substr(
             $self->{buffer},
@@ -473,22 +497,19 @@ sub FixStco {
         );
     }
     foreach my $tfhd (@tfhd_atoms) {
-        my($tf_flags, undef, $offset_high32, $offset_low32) =
-          unpack('NNNN', substr( $self->{buffer}, $tfhd->start + 8, 16 ) );
+        my ( $tf_flags, undef, $offset_high32, $offset_low32 ) =
+          unpack( 'NNNN', substr( $self->{buffer}, $tfhd->start + 8, 16 ) );
         my $offset64 = ( $offset_high32 * ( 2**32 ) ) + $offset_low32;
+
         # we only need to adjust if the 1st movie fragment tf_flags bit is set
-        next unless( ($tf_flags % 2) == 1 ); 
+        next unless ( ( $tf_flags % 2 ) == 1 );
         next if $offset64 < $change_position;
         $offset64 -= $sinf_sz;
-        $offset_high32 = int( $offset64 / (2**32) + 0.0001 );
-        $offset_low32  = $offset64 % (2**32);
-        substr( 
-            $self->{buffer}, 
-            $tfhd->start + 16,
-            8,
-            pack( 'NN', $offset_high32, $offset_low32 )
-        );
-    }    
+        $offset_high32 = int( $offset64 / ( 2**32 ) + 0.0001 );
+        $offset_low32 = $offset64 % ( 2**32 );
+        substr( $self->{buffer}, $tfhd->start + 16,
+            8, pack( 'NN', $offset_high32, $offset_low32 ) );
+    }
 }
 
 sub GetSampleTable {
@@ -511,60 +532,63 @@ sub DeleteAtom {
 sub DeleteAtomWithStcoFix {
     my ( $self, $unwanted ) = @_;
     my $atom = $self->FindAtom($unwanted) or return;
-    my $siz = $atom->size;
-    my $pos = $atom->start;
+    my $siz  = $atom->size;
+    my $pos  = $atom->start;
     $atom->selfDelete() or return;
     $self->FixStco( $siz, $pos );
     return 1;
 }
 
 sub CleanAppleM4aPersonalData {
-    my($self) = @_;
+    my ($self) = @_;
     my $mp4a = $self->FindAtom("mp4a") or return;
-    foreach my $unwanted ( @apple_user_id_atoms ) {
+    foreach my $unwanted (@apple_user_id_atoms) {
         $self->DeleteAtomWithStcoFix($unwanted);
     }
 }
 
 sub GetFtype {
-    my($self) = @_;
+    my ($self) = @_;
     my $atom = $self->FindAtom('ftyp') or return;
-    my $ftyp = substr($atom->data, 0, 4);
+    my $ftyp = substr( $atom->data, 0, 4 );
     $ftyp =~ s/^(\S+)\s+$/$1/;
     return $ftyp;
 }
 
 sub Get3GPInfo {
-    my($self) = @_;
-    while( my($meta_type, $atom_type) = each %asset_3GP_types ) {
+    my ($self) = @_;
+    while ( my ( $meta_type, $atom_type ) = each %asset_3GP_types ) {
         my $atom = $self->FindAtom($atom_type) or next;
-        my $data = substr($atom->{buffer},$atom->start + 14,$atom->size - 14);
+        my $data =
+          substr( $atom->{buffer}, $atom->start + 14, $atom->size - 14 );
         $self->{MP4Info}->{$meta_type} = $data;
     }
     while ( my ( $tag, $alt_tag ) = each %alternate_tag_types ) {
         $self->{MP4Info}->{$alt_tag} = $self->{MP4Info}->{$tag}
           if exists $self->{MP4Info}->{$tag};
-    }  
+    }
     my $file_type = $self->GetFtype();
     $self->{MP4Info}->{FTYP} = $file_type if $file_type;
     return $self->{MP4Info};
 }
 
 sub Set3GPInfo {
-    my( $self, $field, $value, $delete_old ) = @_;
+    my ( $self, $field, $value, $delete_old ) = @_;
     my $asset_type = $asset_3GP_types{$field};
     my $moov = $self->FindAtom('moov') or croak "No moov atom found";
-    my($asset, $udta);
-    foreach my $typ (values %asset_3GP_types ) {
+    my ( $asset, $udta );
+    foreach my $typ ( values %asset_3GP_types ) {
         $asset = $self->FindAtom($typ) or next;
         $udta = $asset->GetParent();
         last if $udta and $udta->{type} =~ /udta/i;
         $udta = 0;
     }
+
     # if cannot find any asset atoms, look for the udta child of moov
     $udta = $moov->DirectChildren('udta') unless $udta;
+
     # if no direct child of moov udta, make one
-    unless($udta) {
+    unless ($udta) {
         $moov->insertNew( 'udta', '' );
         $self->FixStco( -8, $moov->start );
         $udta = $moov->Contained('udta');
@@ -578,23 +602,24 @@ sub Set3GPInfo {
             $u->selfDelete;
         }
     }
+
     # now we can add the data
     # we set language code to 'eng'
-    my $lang = 'eng';
+    my $lang        = 'eng';
     my $packed_lang = asset_language_pack_iso_639_2T($lang);
-    my $data_packet = pack('Nn', 0,  $packed_lang) . $value;
-    my $new_atom = $udta->insertNew( $asset_type, $data_packet );
+    my $data_packet = pack( 'Nn', 0, $packed_lang ) . $value;
+    my $new_atom    = $udta->insertNew( $asset_type, $data_packet );
     $diff -= $new_atom->size;
     $self->FixStco( $diff, $udta->start );
     return $new_atom;
-}        
+}
 
 sub GetMetaInfo {
     my ( $self, $as_text ) = @_;
-    
+
     # if we have a 3gp file, dispatch
     return $self->Get3GPInfo() if $self->GetFtype() =~ /^3g/;
-    
+
     my %meta_tags;
     while ( my ( $meta_tag, $type ) = each %tag_types ) {
         $type =~ s/\W//g;
@@ -610,7 +635,10 @@ sub GetMetaInfo {
         }
         else {
             my $firstchar = unpack( 'C', $data );
-            $data = substr( $data, 8 ) unless $firstchar > 0;
+            if ( $firstchar == 0 ) {
+               $data = substr( $data, 8 );
+               utf8::decode($data) if ($utf8_atoms{$type});
+            } 
         }
         $self->{MP4Info}->{$meta_tag} = $data;
         while ( my ( $tag, $alt_tag ) = each %alternate_tag_types ) {
@@ -687,11 +715,11 @@ sub GetMP4Info {
 sub SetMetaInfo {
     my ( $self, $field, $value, $delete_old, $before, $as_text ) = @_;
     $self->GetMetaInfo;    # fill default fields like TRACKCOUNT
-    
+
     # if we have a 3gp file, dispatch
-    return $self->Set3GPInfo( $self, $field, $value, $delete_old ) 
-      if $self->GetFtype() =~ /^3g/;;
-    
+    return $self->Set3GPInfo( $self, $field, $value, $delete_old )
+      if $self->GetFtype() =~ /^3g/;
+
     my $type = $tag_types{$field} || lc substr( $field, 0, 4 );
     my $ilst = $self->FindAtom('ilst') || $self->MakeIlstAtom || return;
     my $typ = $type;
@@ -730,6 +758,7 @@ sub SetMetaInfo {
         $diff -= 16;
     }
     else {
+        utf8::encode($value) if ($utf8_atoms{$type}); 
         $ilst->insertNewMetaData( $type, $value, $before );
         $diff -= 24;
     }
@@ -737,36 +766,36 @@ sub SetMetaInfo {
     $self->FixStco( $diff, $ilst->start );
 }
 
-
 sub MakeIlstAtom {
     my ($self) = @_;
     my $moov = $self->FindAtom('moov') or croak "No moov atom found";
     my $udta = $moov->DirectChildren('udta');
-  
+
     # if no udta under moov, make one under moov
-    unless($udta) {
+    unless ($udta) {
         $moov->insertNew( 'udta', '' );
         $self->FixStco( -8, $moov->start );
         $udta = $moov->Contained('udta');
     }
-    
-    # if we have a meta atom, add an hdlr atom and ilst to it 
-    # if we do not have one make one 
-    my( $meta, $hdlr, $ilst );
+
+    # if we have a meta atom, add an hdlr atom and ilst to it
+    # if we do not have one make one
+    my ( $meta, $hdlr, $ilst );
     $meta = $udta->Contained('meta');
-    unless($meta) {
+    unless ($meta) {
         $udta->insertNew( 'meta', "\0\0\0\0" );
         $self->FixStco( -12, $udta->start );
         $meta = $udta->Contained('meta');
     }
     $hdlr = $meta->Contained('hdlr');
-    unless($hdlr) {
-        $meta->insertNew( 'hdlr', "\0\0\0\0\0\0\0\0mdirappl\0\0\0\0\0\0\0\0\0" );
+    unless ($hdlr) {
+        $meta->insertNew( 'hdlr',
+            "\0\0\0\0\0\0\0\0mdirappl\0\0\0\0\0\0\0\0\0" );
         $self->FixStco( -33, $meta->start );
         $hdlr = $meta->Contained('hdlr');
     }
     $ilst = $meta->Contained('ilst');
-    unless($ilst) {
+    unless ($ilst) {
         $meta->insertNew( 'ilst', '' );
         $self->FixStco( -8, $meta->start );
         $ilst = $meta->Contained('ilst');
@@ -800,7 +829,8 @@ sub iTMS_MetaInfo {
                 my $gnre = genre_text_to_genre_num($data);
                 $data = pack "n", $gnre unless $gnre eq 'INVALID_GENRE';
             }
-            $self->SetMetaInfo( $type, $data, $keep_old ? undef : 1, undef, undef );
+            $self->SetMetaInfo( $type, $data, $keep_old ? undef: 1,
+                undef, undef );
         }
     }
     while ( ( $key, $type ) = each %iTMS_dict_meta_types ) {
@@ -997,11 +1027,11 @@ sub genre_num_to_genre_text {
 }
 
 sub asset_language_pack_iso_639_2T {
-    my($lang3chars) = @_;
-    my( $c1, $c2, $c3 ) = map { $_ ? ord($_) - 60 : 0 } split (//, $lang3chars);
-    return ($c1 * (2 ** 10)) + ($c2 * (2 ** 5)) + $c3;
+    my ($lang3chars) = @_;
+    my ( $c1, $c2, $c3 ) =
+      map { $_ ? ord($_) - 60 : 0 } split( //, $lang3chars );
+    return ( $c1 * ( 2**10 ) ) + ( $c2 * ( 2**5 ) ) + $c3;
 }
-
 
 =head1 NAME
 

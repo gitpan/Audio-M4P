@@ -1,5 +1,13 @@
 Revision history for Perl modules under Audio::M4P
 
+0.40 Fri 7 Dec 2007
+    - improved circular reference handling with the 'use_weak_ref' option
+      in Tree::Simple and some weakening of the Atom's internal circular refs
+
+0.39 Thu 6 Dec 2007
+    - more memory leak fix work, and
+    - add some utf8 data fixes, thanks to Christopher K. for the patches
+
 0.38 Thu 27 Sep 2007
     - fixed a circular reference memory leak in the parse tree, 
       thanks to Paul S. for finding the bug

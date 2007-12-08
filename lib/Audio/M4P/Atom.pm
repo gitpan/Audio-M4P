@@ -4,9 +4,11 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.38';
+our $VERSION = '0.40';
 
-use Tree::Simple;
+use Scalar::Util 'weaken';
+
+use Tree::Simple 'use_weak_refs';
 use Tree::Simple::Visitor;
 use Tree::Simple::View::HTML;
 
@@ -16,7 +18,8 @@ my %container_atom_types = (
     akid   => 1,
     '©alb' => 1,
     apid   => 1,
-    '©ART' => 1,    
+    aART   => 1,
+    '©ART' => 1,
     atid   => 1,
     clip   => 1,
     '©cmt' => 1,
@@ -79,7 +82,7 @@ my %noncontainer_atom_types = (
     name   => 1,
     priv   => 1,
     rtp    => 1,
-    sign   => 1, 
+    sign   => 1,
     stco   => 1,
     stsc   => 1,
     stsd   => 1,
@@ -96,8 +99,8 @@ my %noncontainer_atom_types = (
 
 sub int64toN {
     my ($int64) = @_;
-    my $high32bits = pack( 'N', int($int64 / (2**32) + 0.0001) );
-    my $low32bits  = pack( 'N', $int64 % (2**32) );
+    my $high32bits = pack( 'N', int( $int64 / ( 2**32 ) + 0.0001 ) );
+    my $low32bits = pack( 'N', $int64 % ( 2**32 ) );
     return $high32bits . $low32bits;
 }
 
@@ -114,11 +117,38 @@ sub new {
     my $self = \%args;
     bless( $self, $class );
     $self->{node} = Tree::Simple->new($self);
-    $self->{parent} = 0 unless exists $self->{parent};
-    $self->{parent}->addChild( $self->{node} ) if ref $self->{parent};
-    $self->read_buffer( $self->{read_buffer} ) 
-      if exists $self->{read_buffer} and exists $self->{rbuf};
+    if( ref $self->{parent} ) {
+        $self->{parent}->addChild( $self->{node} );
+        weaken $self->{node};
+        weaken $self->{parent};
+    }
+    else {     
+        $self->{parent} = 0;
+    }
+    if( ref $self->{rbuf} ) {
+        weaken $self->{rbuf};
+        $self->read_buffer( $self->{read_buffer_position} )
+          if exists $self->{read_buffer_position};
+    }    
     return $self;
+}
+
+sub DESTROY {
+    my($self) = @_;
+    delete $self->{parent};
+    delete $self->{rbuf};
+    return unless ref $self->{node};
+    my @kids = $self->{node}->getAllChildren();
+    foreach my $child (@kids) {
+        next unless ref $child;
+        my $val = $child->getNodeValue();
+        $val->DESTROY 
+                    if ref $val 
+                    and ref $val->{parent}
+                    and $val->{parent} eq $self;
+    }
+    $self->{node}->DESTROY if ref $self->{node};
+    delete $self->{node};
 }
 
 sub parent { return shift->{parent} }
@@ -219,7 +249,7 @@ sub offset {
 sub data {
     my ( $self, $newdata ) = @_;
     if ( defined $newdata ) {
-        my $newsize = (length $newdata) + 8;
+        my $newsize = ( length $newdata ) + 8;
         my $diff    = $newsize - $self->{size};
         $self->resizeContainers($diff);
         substr(
@@ -228,7 +258,7 @@ sub data {
             $self->{size} - $self->{offset}, $newdata
         );
         $self->size($newsize);
-        $self->redoStarts($diff, $self->{start});
+        $self->redoStarts( $diff, $self->{start} );
     }
     return substr(
         ${ $self->{rbuf} },
@@ -247,7 +277,7 @@ sub root {
 sub getAllRelatives {
     my ($self) = @_;
     my $visitor = Tree::Simple::Visitor->new();
-    $self->root->accept($visitor);
+    $self->root()->accept($visitor);
     my @a = $visitor->getResults;
     return \@a;
 }
@@ -270,9 +300,8 @@ sub AtomTree {
 
 sub resizeContainers {
     my ( $self, $diff ) = @_;
-    my $parent = $self->{parent};
-    if ( $parent and ref $parent ) {
-        my $container = $parent->getNodeValue();
+    if ( $self->{parent} and ref $self->{parent} ) {
+        my $container = $self->{parent}->getNodeValue();
         if ( $container->{type} ne 'file' ) {
             $container->size( $container->size + $diff );
             $container->resizeContainers($diff)
@@ -295,9 +324,9 @@ sub selfDelete {
     $self->resizeContainers( -$self->size );
     substr( ${ $self->{rbuf} }, $self->start, $self->size, '' );
     $self->redoStarts( -$self->size, $self->{start} );
-    my $parent = $self->{parent};
-    return unless ref $parent;
-    $parent->removeChild( $self->node );
+    return unless ref $self->{parent};
+    $self->{parent}->removeChild( $self->{node} );
+    delete $self->{parent};
     return 1;
 }
 
@@ -333,6 +362,7 @@ sub insertNewMetaData {
 }
 
 sub addMoreArtwork {
+
     # add more artwork to a covr atom contained in self
     my ( $self, $data ) = @_;
     my $covr = $self->Contained('covr') or croak "No covr atom in this atom";
@@ -341,9 +371,8 @@ sub addMoreArtwork {
 
 sub Container {
     my ( $self, $container_type ) = @_;
-    my $parent = $self->{parent};
-    return unless $parent and ref $parent;
-    my $parent_atom = $parent->getNodeValue();
+    return unless ref $self->{parent};
+    my $parent_atom = $self->{parent}->getNodeValue();
     return $parent_atom if $parent_atom->{type} =~ /$container_type/i;
     return $parent_atom->Container($container_type);
 }
@@ -368,15 +397,14 @@ sub isContainer {
 }
 
 sub ParentAtom {
-    my($self) = @_;
-    my $parent = $self->{parent};
-    return unless ref $parent;
-    return $parent->getNodeValue();
+    my ($self) = @_;
+    return unless ref $self->{parent};
+    return $self->{parent}->getNodeValue();
 }
 
 sub DirectChildren {
     my ( $self, $type ) = @_;
-    my @kids = $self->Contained($type);   
+    my @kids = $self->Contained($type);
     my @results;
     foreach my $a (@kids) {
         push @results, $a if $a->ParentAtom() eq $self;
