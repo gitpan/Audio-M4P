@@ -1,5 +1,7 @@
 use ExtUtils::MakeMaker;
 
+require 5.008;
+
 WriteMakefile(
     NAME         => 'Audio::M4P',
     AUTHOR       => 'William Hererra (whererra@skylightview.com)',

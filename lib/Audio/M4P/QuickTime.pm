@@ -1,10 +1,10 @@
 package Audio::M4P::QuickTime;
 
-require 5.006;
+require 5.008;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.40';
+our $VERSION = '0.41';
 
 use Audio::M4P::Atom;
 

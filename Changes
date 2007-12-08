@@ -1,5 +1,9 @@
 Revision history for Perl modules under Audio::M4P
 
+0.41 Sat 8 Dec 2007
+    - corrected a skip in a test file (replaced use with require)
+    - utf8::encode requires perl 5.8, so unfortunately that's whet we will need
+
 0.40 Fri 7 Dec 2007
     - improved circular reference handling with the 'use_weak_ref' option
       in Tree::Simple and some weakening of the Atom's internal circular refs
