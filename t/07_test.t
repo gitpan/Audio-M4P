@@ -3,28 +3,19 @@
 use strict;
 use warnings;
 
-use Test::More tests => 1;
+use Test::More;
 
-SKIP: {
+eval "use Test::Memory::Cycle";
+plan skip_all => "Test::Memory::Cycle required for testing memory leaks" if $@;
 
-    eval { require Devel::Leak };
-    skip "Devel::Leak not installed", 1 if $@;
+plan tests => 10;
 
-    use Audio::M4P::QuickTime;
+use Audio::M4P::QuickTime;
 
-    my $count = Devel::Leak::NoteSV( my $handle );
-
-    my $qt;
-    for ( 1 ... 7 ) {
-        $qt = new Audio::M4P::QuickTime( file => 't/booka.mp4' );
-        $qt = '';
-    }
-       
-    my $new_count = Devel::Leak::CheckSV($handle);
-
-    warn "old object count is $count, new count is $new_count";
-
-    ok( $new_count < $count + 800, "circular reference garbage collection" );
-
-
+my $qt;
+for ( 1 ... 10 ) {
+    $qt = new Audio::M4P::QuickTime( file => 't/booka.mp4' );
+    memory_cycle_ok($qt);
+    $qt = '';
 }
+

@@ -4,7 +4,8 @@ require 5.008;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.41';
+use Scalar::Util 'weaken';
+our $VERSION = '0.42';
 
 use Audio::M4P::Atom;
 
@@ -228,6 +229,8 @@ our %asset_3GP_types = (
     LOCATION => 'loci',     # location information
 );
 
+our $default_asset_3GP_lang = 'eng';
+
 #------------------- object methods -----------------------------------------#
 
 sub new {
@@ -273,6 +276,7 @@ sub ParseBuffer {
         offset => 8,
         parent => 0,
     );
+    weaken $self->{root};
     my $fsize = length $self->{buffer};
     print "Buffer size is $fsize\n" if $self->{DEBUG};
     $self->ParseMP4Container( $self->{root}->node, 0, $fsize );
@@ -499,11 +503,13 @@ sub FixStco {
     foreach my $tfhd (@tfhd_atoms) {
         my ( $tf_flags, undef, $offset_high32, $offset_low32 ) =
           unpack( 'NNNN', substr( $self->{buffer}, $tfhd->start + 8, 16 ) );
-        my $offset64 = ( $offset_high32 * ( 2**32 ) ) + $offset_low32;
 
         # we only need to adjust if the 1st movie fragment tf_flags bit is set
         next unless ( ( $tf_flags % 2 ) == 1 );
+        
+        my $offset64 = ( $offset_high32 * ( 2**32 ) ) + $offset_low32;
         next if $offset64 < $change_position;
+        
         $offset64 -= $sinf_sz;
         $offset_high32 = int( $offset64 / ( 2**32 ) + 0.0001 );
         $offset_low32 = $offset64 % ( 2**32 );
@@ -605,7 +611,7 @@ sub Set3GPInfo {
 
     # now we can add the data
     # we set language code to 'eng'
-    my $lang        = 'eng';
+    my $lang        = $default_asset_3GP_lang;
     my $packed_lang = asset_language_pack_iso_639_2T($lang);
     my $data_packet = pack( 'Nn', 0, $packed_lang ) . $value;
     my $new_atom    = $udta->insertNew( $asset_type, $data_packet );

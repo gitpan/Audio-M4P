@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.40';
+our $VERSION = '0.42';
 
 use Scalar::Util 'weaken';
 
