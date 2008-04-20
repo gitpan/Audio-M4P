@@ -1,11 +1,11 @@
 --- #YAML:1.0
 name:                Audio-M4P
-version:             0.42
+version:             0.44
 abstract:            Perl M4P/MP4/M4a video and audio media file tools
-license:             ~
+license:             perl
 author:              
     - William Hererra (whererra@skylightview.com)
-generated_by:        ExtUtils::MakeMaker version 6.42
+generated_by:        ExtUtils::MakeMaker version 6.42_01
 distribution_type:   module
 requires:     
     Crypt::Rijndael:               0

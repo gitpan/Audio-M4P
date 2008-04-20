@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.42';
+our $VERSION = '0.44';
 
 use Scalar::Util 'weaken';
 
@@ -435,6 +435,72 @@ M4P is a QuickTime protected audio file format. It is composed of a linear
 stream of bytes which are segmented into units called atoms. Some atoms
 may contain other atoms. This module has methods for handling atoms which 
 are delegated by the QuickTime and other modules in the Audio::M4P hierarchy.
+   
+=head2 Class Internal Functions
+
+=over 4
+
+=item B<AtomTree>
+
+=item B<BigResize>
+
+=item B<Contained>
+
+=item B<Container>
+
+=item B<DirectChildren>
+
+=item B<ParentAtom>
+
+=item B<addMoreArtwork>
+
+=item B<data>
+
+=item B<getAllRelatives>
+
+=item B<insertNew>
+
+=item B<insertNewMetaData>
+
+=item B<int64fromN>
+
+=item B<int64toN>
+
+=item B<isContainer>
+
+=item B<new>
+
+=item B<node>
+
+=item B<offset>
+
+=item B<parent>
+
+=item B<print>
+
+=item B<rbuf>
+
+=item B<read_buffer>
+
+=item B<redoStarts>
+
+=item B<resizeContainers>
+
+=item B<root>
+
+=item B<selfDelete>
+
+=item B<size>
+
+=item B<start>
+
+=item B<toBigSize>
+
+=item B<toRegularSize>
+
+=item B<type>
+
+=back
    
 =head1 AUTHOR 
 

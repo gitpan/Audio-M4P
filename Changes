@@ -1,5 +1,11 @@
 Revision history for Perl modules under Audio::M4P
 
+0.44 Sun 20 April 2008
+    - pod revisions, added tests for pod
+
+0.43 Tue 8 Jan 2008
+    - revised track count setting function-- thanks to Eli A.
+
 0.42 Sun 6 Jan 2008
     - another memory leak patch for Perl 5.10, and a test for this
 

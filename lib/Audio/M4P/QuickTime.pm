@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.42';
+our $VERSION = '0.44';
 
 use Audio::M4P::Atom;
 
@@ -822,7 +822,7 @@ sub iTMS_MetaInfo {
                 $data = pack "nnn", 0, $data, $count;
             }
             if ( $key eq 'trackNumber' ) {
-                my $count = $dict->{trackCount} or next;
+                my $count = $dict->{trackCount} || 0;
                 $data = pack "nnnn", 0, $data, $count, 0;
             }
             if ( $key eq 'artworkURL' ) {
@@ -1472,6 +1472,8 @@ Remove personal identifiers from Apple's iTMS .m4a format files.
 
 =item ParseStsd
 
+=item ParseMp4a
+
 =item genre_num_to_genre_text
 
 =item genre_text_to_genre_num
@@ -1538,7 +1540,7 @@ Questions, feature requests and bug reports should go to
 
 =over 4
 
-Copyright (c) 2003-2005 William Herrera. All rights reserved.  
+Copyright (c) 2003-2008 William Herrera. All rights reserved.  
 This program is free software; you can redistribute it and/or modify 
 it under the same terms as Perl itself.
 

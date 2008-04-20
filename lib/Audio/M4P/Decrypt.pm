@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.31';
+our $VERSION = '0.44';
 
 use Crypt::Rijndael;
 use Digest::MD5;
@@ -165,6 +165,16 @@ More descriptive alias for the B<DeDRMS> method.
 
     If you need to locate your iTMS keys, look for compatible versions of 
     JHymn or FairKeys, or use the LWP::UserAgent::iTMS_Client Perl module.
+
+=head2 Class Internal Functions
+
+=over 4
+
+=item B<Decrypt>
+
+=item B<GetUserKey>
+
+=back
 
 =head1 AUTHOR 
 
