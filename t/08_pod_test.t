@@ -1,5 +1,3 @@
-# t/06_pod_test.t - pod testing
-
 use strict;
 use warnings;
 

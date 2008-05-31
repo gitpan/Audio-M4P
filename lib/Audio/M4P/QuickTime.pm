@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 use Audio::M4P::Atom;
 
@@ -546,10 +546,19 @@ sub DeleteAtomWithStcoFix {
 }
 
 sub CleanAppleM4aPersonalData {
-    my ($self) = @_;
-    my $mp4a = $self->FindAtom("mp4a") or return;
-    foreach my $unwanted (@apple_user_id_atoms) {
-        $self->DeleteAtomWithStcoFix($unwanted);
+    my ( $self, %args ) = @_;
+    if( $self->FindAtom("mp4a") or $args{force} ) {
+        foreach my $atm (@apple_user_id_atoms) {
+            $self->DeleteAtomWithStcoFix($atm);
+        }
+    }
+    if( $args{zero_free_atoms} ) {
+        my @free_atoms = $self->FindAtom("free");
+        foreach my $atm (@free_atoms) {
+            my $data_size = $atm->{size} - $atm->{offset};
+            substr( ${ $atm->{rbuf} }, $atm->{start} + $atm->{offset},
+                $data_size, "\x0" x $data_size );
+        }
     }
 }
 
@@ -1433,6 +1442,15 @@ total
 
 
 Remove personal identifiers from Apple's iTMS .m4a format files.
+
+  Note: to prevent inadvertent alteration of non-Apple .m4a files, the function
+  requires a m4a atom to be part of the file unless the "force" argument is used, eg.
+
+  $qt->CleanAppleM4aPersonalData( force => 1, zero_free_atoms => 1 );
+  
+  Here, the zero_free_atoms => 1 named argument forces all data in free atoms 
+  to be nulled out as well.
+
 
 =back
 
