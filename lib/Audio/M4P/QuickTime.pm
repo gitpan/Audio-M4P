@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.45';
+our $VERSION = '0.46';
 
 use Audio::M4P::Atom;
 

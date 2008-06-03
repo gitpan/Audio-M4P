@@ -1,7 +1,7 @@
 Revision history for Perl modules under Audio::M4P
 
 0.45 Thu 29 May 2008
-    - fix for requiem 1.5 modified mp4 files, thanks Uwe Roth
+    - fix for requiem 1.5 modified mp4 files, thanks Uwe R.
 
 0.44 Sun 20 April 2008
     - pod revisions, added tests for pod
