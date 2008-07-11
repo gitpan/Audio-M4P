@@ -10,7 +10,8 @@ WriteMakefile(
     LICENSE      => 'perl',
     PREREQ_PM    => { Crypt::Rijndael => 0, Digest::MD5 => 0, Test::More => 0,
                       Tree::Simple => 0, Tree::Simple::Visitor => 0,
-                      Tree::Simple::View::HTML => 0, Scalar::Util => 0 },
+                      Tree::Simple::View::HTML => 0, Scalar::Util => 0,
+                      iTunes::Sid => 0.04, Crypt::AppleTwoFish => 0.05  },
 );
 
 

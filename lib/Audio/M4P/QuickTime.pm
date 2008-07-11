@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.46';
+our $VERSION = '0.50';
 
 use Audio::M4P::Atom;
 
@@ -212,6 +212,14 @@ our @genre_strings = (
     "INVALID_GENRE"
 );
 
+our %genre_text_to_genre_numbers;
+my $genre_num = 1;
+foreach my $genre (@genre_strings) {
+    $genre_text_to_genre_numbers{$genre} = $genre_num;
+    ++$genre_num;
+}
+our %genre_numbers_to_genre_text = reverse %genre_text_to_genre_numbers;
+
 our %asset_3GP_types = (
     ALBUM     => 'albm',    # album title and track number for the media
     ARTIST    => 'perf',    # performer or artist
@@ -269,12 +277,12 @@ sub ParseBuffer {
     my ($self) = @_;
     $self->{atom_count} = 0;
     $self->{root}       = new Audio::M4P::Atom(
-        rbuf   => \$self->{buffer},
-        type   => 'file',
-        size   => length $self->{buffer},
-        start  => 0,
-        offset => 8,
-        parent => 0,
+        rbuf                  => \$self->{buffer},
+        type                  => 'file',
+        size                  => length $self->{buffer},
+        read_buffer_position  => 0,
+        offset                => 8,
+        parent                => 0,
     );
     weaken $self->{root};
     my $fsize = length $self->{buffer};
@@ -288,8 +296,9 @@ sub WriteFile {
     my ( $self, $outfile ) = @_;
     open( my $outfh, '>', $outfile ) or croak "Cannot open output $outfile: $!";
     binmode $outfh;
-    print $outfh $self->{buffer};
+    my $retval = print $outfh $self->{buffer};
     close $outfh;
+    return $retval;
 }
 
 sub ParseMP4Container {
@@ -344,7 +353,6 @@ sub ParseMp4a {
         $mp4a->start + $mp4a->size - 36
     );
 }
-
 sub ParseDrms {
     my ( $self, $drms ) = @_;
     $self->ParseMP4Container(
@@ -353,12 +361,14 @@ sub ParseDrms {
         $drms->start + $drms->size - 36
     );
     $self->{userID} = unpack 'N*', $self->FindAtomData('user');
-    my $key = $self->FindAtomData('key');
-    $self->{keyID} = unpack 'N*', $key if $key;
+    my $key = $self->FindAtomData('key ');
+    $self->{keyID} = unpack 'N', $key if $key;
     $self->{priv} = $self->FindAtomData('priv');
     my $name = $self->FindAtomData('name');
     $self->{name} = substr( $name, 0, index( $name, "\0" ) );
     $self->{iviv} = $self->FindAtomData('iviv');
+    print "userID ", $self->{userID}, " keyID ", $self->{keyID}, "\n"
+      if $self->{DEBUG};
 }
 
 sub ParseMeta {
@@ -661,8 +671,17 @@ sub GetMetaInfo {
               if defined $self->{MP4Info}->{$tag};
         }
     }
+    
+    if( !$self->{MP4Info}->{GENRE} ) {
+        my $gen_atom = $self->FindAtom('©gen');
+        if($gen_atom) {
+            my $genre_txt = substr $gen_atom->data, 16;
+            my $genre_num = $genre_text_to_genre_numbers{$genre_txt};
+            $self->{MP4Info}->{GENRE} = $self->{MP4Info}->{GNRE} = $genre_num;
+        }
+    }
+    
     if ($as_text) {
-
         # if as_text, we need to convert the tags to text
         if ( defined $self->{MP4Info}->{DISK} ) {
             ( undef, my $disknum, my $disks ) = unpack 'nnn',
@@ -679,7 +698,8 @@ sub GetMetaInfo {
             my $tempo = unpack 'n', $self->{MP4Info}->{TMPO};
             $self->{MP4Info}->{TMPO} = $tempo || "Undefined";
         }
-        if ( defined $self->{MP4Info}->{CPRT} ) {
+        if( defined $self->{MP4Info}->{CPRT} && 
+          length( $self->{MP4Info}->{CPRT} ) > 3 ) { 
             $self->{MP4Info}->{CPRT} = substr( $self->{MP4Info}->{CPRT}, 3 );
         }
         if ( defined $self->{MP4Info}->{COVR} ) {
@@ -1021,24 +1041,12 @@ sub isMetaDataType {
 
 sub genre_text_to_genre_num {
     my $text = shift;
-    my $genre_num;
-    if ($text) {
-        my $i = 1;
-        foreach my $t (@genre_strings) {
-            if ( $t eq $text ) {
-                $genre_num = $i;
-                last;
-            }
-            ++$i;
-        }
-    }
-    return $genre_num;
+    return $genre_text_to_genre_numbers{$text};
 }
 
 sub genre_num_to_genre_text {
     my $num = shift;
-    return unless $num > 0 and $num <= scalar @genre_strings;
-    return $genre_strings[ $num - 1 ];
+    return $genre_numbers_to_genre_text{$num};
 }
 
 sub asset_language_pack_iso_639_2T {

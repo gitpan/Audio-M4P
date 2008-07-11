@@ -4,10 +4,10 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.44';
+our $VERSION = '0.50';
 
-use Crypt::Rijndael;
 use Digest::MD5;
+use Crypt::Rijndael;
 use Audio::M4P::QuickTime;
 
 sub new {
@@ -15,20 +15,20 @@ sub new {
     my $self = {};
     bless( $self, $class );
     $self->{meta} = {};
-    foreach my $k (qw( strHome sPfix dirSep DEBUG DEBUGDUMPFILE )) {
+    foreach my $k (qw( strHome sPfix dirSep DEBUG DEBUGDUMPFILE forceclean )) {
         $self->{$k} = $args{$k} if exists $args{$k};
     }
     unless ( exists $self->{strHome} ) {
         if    ( $ENV{APPDATA} ) { $self->{strHome} = $ENV{APPDATA} }
         elsif ( $ENV{HOME} )    { $self->{strHome} = $ENV{HOME} }
-        else { $self->{strHome} = '~' }
+        else                    { $self->{strHome} = '~' }
     }
     unless ( exists $self->{sPfix} ) {
-        if ( $^O =~ /Win/ ) { $self->{sPfix} = '' }
-        else { $self->{sPfix} = '.' }
+        if   ( $^O eq 'MSWin32' ) { $self->{sPfix} = '' }
+        else                      { $self->{sPfix} = '.' }
     }
-    $self->{dirSep} = '/' unless exists $self->{dirSep};;
-    $self->{DEBUG}  = 0 unless exists $self->{DEBUG};
+    $self->{dirSep} = '/' unless exists $self->{dirSep};
+    $self->{DEBUG}  = 0   unless exists $self->{DEBUG};
     $self->{QTStream} = new Audio::M4P::QuickTime(%args);
     return $self;
 }
@@ -42,10 +42,10 @@ sub GetUserKey {
     $keyFile = sprintf( "%s%s%sdrms%s%08X.%03d",
         $self->{strHome}, $self->{dirSep}, $self->{sPfix}, $self->{dirSep},
         $userID, $keyID );
-    open( $fh, '<', $keyFile ) or croak "Cannot open file $keyFile: $!";
+    open( $fh, '<', $keyFile ) or return;
     binmode $fh;
     print "Keyfile $keyFile\n" if $self->{DEBUG};
-    read( $fh, $userKey, -s $keyFile ) or croak "Cannot read user keyfile: $!";
+    read( $fh, $userKey, -s $keyFile ) or return;
     return $userKey;
 }
 
@@ -62,7 +62,15 @@ sub DeDRMS {
     $self->{QTStream}->ParseBuffer();
     my $sampleTable = $self->{QTStream}->GetSampleTable();
     my $userKey     = $self->GetUserKey( $self->{QTStream}->{userID},
-        $self->{QTStream}->{keyID} );
+        $self->{QTStream}->{keyID} )
+      || $self->GetSCInfoUserKey();
+    if ( !$userKey ) {
+        carp "Cannot find user key for $infile";
+        return;
+    }
+    else {
+        print "User key is $userKey\n" if $self->{DEBUG};
+    }
     my $md5 = new Digest::MD5;
     $md5->add( $self->{QTStream}->{name}, $self->{QTStream}->{iviv} );
     my $alg = new Crypt::Rijndael( $userKey, Crypt::Rijndael::MODE_CBC );
@@ -71,7 +79,10 @@ sub DeDRMS {
         \$self->{QTStream}->{priv},          0,
         length( $self->{QTStream}->{priv} ), $alg
     );
-    $self->{QTStream}->{priv} =~ /^itun/ or croak "Priv decryption failed.";
+    if ( $self->{QTStream}->{priv} !~ /^itun/ ) {
+        carp "Priv decryption if $infile failed.";
+        return;
+    }
     my $key = substr( $self->{QTStream}->{priv}, 24, 16 );
     $alg = new Crypt::Rijndael( $key, Crypt::Rijndael::MODE_CBC );
     $alg->set_iv( substr( $self->{QTStream}->{priv}, 48, 16 ) );
@@ -83,6 +94,10 @@ sub DeDRMS {
         $posit += $samplesize;
     }
     $self->{QTStream}->ConvertDrmsToMp4a();
+    if ( $self->{forceclean} ) {
+        $self->{QTStream}
+          ->CleanAppleM4aPersonalData( force => 1, zero_free_atoms => 1 );
+    }
     $self->{QTStream}->WriteFile($outfile);
 }
 
@@ -134,11 +149,12 @@ an html picture of the m4p data structure.
 
 =item B<DeDRMS>
 
- my $cs = new Audio::M4P::Decrypt;
+ my $cs = new Audio::M4P::Decrypt( forceclean => 1;
  $cs->DeDRMS('infilename', 'outfilename');
 
 Decode infilename, write to outfilename. Reading slurps up an entire file,
 so output can overwrite the same file without a problem, we hope. Backup first.
+'forceclean => 1' will also attempt to remove residual personal data from the file.
 
 =item B<DecryptFile>
 
@@ -153,6 +169,7 @@ More descriptive alias for the B<DeDRMS> method.
 =over 4
 
 =item L<LWP::UserAgent::iTMS_Client>
+=item L<iTunes::Sid>
 
 =back
 

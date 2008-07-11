@@ -1,5 +1,15 @@
 Revision history for Perl modules under Audio::M4P
 
+0.50 Mon 30 June 2008
+    - some revision to the decrypt functions
+
+0.48 Thu 19 Jun 2008
+    - some bug fixes for copyright and genre metadata, thanks to Brian L.
+
+0.47 Thu 12 Jun 2008
+    - fix for @gen versus genre atom text, thanks to Alex K. for finding 
+      the issue
+
 0.45 Thu 29 May 2008
     - fix for requiem 1.5 modified mp4 files, thanks Uwe R.
 
