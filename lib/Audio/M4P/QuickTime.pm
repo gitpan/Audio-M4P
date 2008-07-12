@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.50';
+our $VERSION = '0.51';
 
 use Audio::M4P::Atom;
 
@@ -1531,15 +1531,15 @@ method, unless only one thread is used to modify any given audio file.
 
 =over 4
 
-=item L<Audio::M4P>, L<Audio::M4P::Atom>, L<Audio::M4PDecrypt>
-
-=item L<LWP::UserAgent::iTMS_Client>
+=item L<Audio::M4P>, L<Audio::M4P::Atom>
 
 =back    
 
 =head1 SEE ALSO
 
 =over 4
+
+=item L<LWP::UserAgent::iTMS_Client>, L<iTunes::Sid>
 
 =item L<MP3::Info>, L<MP4::Info>, L<MP3::Tag>, L<Audio::TagLib>, L<Audio::File::Tag>, L<Mac::iTunes>, L<Net::iTMS>, L<LWP::UserAgent::iTMS_Client>
 

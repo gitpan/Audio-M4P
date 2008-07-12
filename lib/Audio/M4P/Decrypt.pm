@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.50';
+our $VERSION = '0.51';
 
 use Digest::MD5;
 use Crypt::Rijndael;
@@ -130,8 +130,7 @@ Originally derived from the DeDRMS.cs program by Jon Lech Johansen
  my $cs = new Audio::M4P::Decrypt;
 
  my $cs_conparam = Audio::M4P::Decrypt->new(
-     strHome => '~', sPfix => '.', dirSep => '/'
- );
+   strHome => '~', sPfix => '.', dirSep => '/' );
 
 Optional arguments: strHome is the directory containing the keyfile directory.
 After running VLC on a .m4p file under Windows, MacOS X, and Linux, this should
@@ -149,7 +148,7 @@ an html picture of the m4p data structure.
 
 =item B<DeDRMS>
 
- my $cs = new Audio::M4P::Decrypt( forceclean => 1;
+ my $cs = new Audio::M4P::Decrypt( forceclean => 1 );
  $cs->DeDRMS('infilename', 'outfilename');
 
 Decode infilename, write to outfilename. Reading slurps up an entire file,
@@ -169,6 +168,7 @@ More descriptive alias for the B<DeDRMS> method.
 =over 4
 
 =item L<LWP::UserAgent::iTMS_Client>
+
 =item L<iTunes::Sid>
 
 =back
