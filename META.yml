@@ -1,20 +1,28 @@
 --- #YAML:1.0
-name:                Audio-M4P
-version:             0.51
-abstract:            Perl M4P/MP4/M4a video and audio media file tools
-license:             perl
-author:              
+name:               Audio-M4P
+version:            0.52
+abstract:           Perl M4P/MP4/M4a video and audio media file tools
+author:
     - William Hererra (whererra@skylightview.com)
-generated_by:        ExtUtils::MakeMaker version 6.42_01
-distribution_type:   module
-requires:     
-    Crypt::Rijndael:               0
-    Digest::MD5:                   0
-    Scalar::Util:                  0
-    Test::More:                    0
-    Tree::Simple:                  0
-    Tree::Simple::View::HTML:      0
-    Tree::Simple::Visitor:         0
+license:            perl
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    Crypt::Rijndael:      0
+    Digest::MD5:          0
+    Scalar::Util:         0
+    Test::More:           0
+    Tree::Simple:         0
+    Tree::Simple::View::HTML:  0
+    Tree::Simple::Visitor:  0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.56
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
-    version: 1.3
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4
