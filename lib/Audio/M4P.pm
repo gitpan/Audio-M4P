@@ -2,6 +2,8 @@ use strict;
 # kwalitee, schmalitee...
 # buggy CPANTS wants even dumb doc placeholder modules to use strict...
 
+our $VERSION = '0.53';
+
 =head1 NAME
 
 Audio::M4P -- Perl QuickTime / MP4 / iTunes Music Store audio / video file tools
@@ -46,6 +48,8 @@ Questions, feature requests and bug reports should go to
 Copyright (c) 2003-2005 William Herrera. All rights reserved.  
 This program is free software; you can redistribute it and/or modify 
 it under the same terms as Perl itself.
+
+=back
 
 =cut
 
