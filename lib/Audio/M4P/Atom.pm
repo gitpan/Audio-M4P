@@ -4,7 +4,7 @@ require 5.006;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 use Scalar::Util 'weaken';
 
@@ -364,9 +364,10 @@ sub insertNewMetaData {
 sub addMoreArtwork {
 
     # add more artwork to a covr atom contained in self
-    my ( $self, $data ) = @_;
+    my ( $self, $data, $type ) = @_;
+    $type = 13 unless $type;
     my $covr = $self->Contained('covr') or croak "No covr atom in this atom";
-    $covr->insertNew( 'data', pack( 'NN', 13, 0 ) . $data );
+    $covr->insertNew( 'data', pack( 'NN', $type, 0 ) . $data );
 }
 
 sub Container {

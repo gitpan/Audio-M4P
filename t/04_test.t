@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 11;
+use Test::More tests => 14;
 
 use Audio::M4P::QuickTime;
 
@@ -50,3 +50,16 @@ ok( $qt->genre_as_text eq $genre_txt, "Genre Text Tag" );
 my ( $t, $tt ) = $qt->tracks;
 ok( $t == $track,     "Tracks Tags : track number" );
 ok( $tt == $track_ct, "Tracks Tags : track count" );
+
+
+ok( scalar @{$qt->GetCoverArt()} == 1,  "added artwork as meta info" );
+$qt->DeleteAllCoverArt;
+$qt->WriteFile('t/temp04.m4a');
+$qt = new Audio::M4P::QuickTime( file => 't/temp04.m4a' );
+ok( ! defined $qt->GetCoverArt(),  "deleted artwork" );
+
+$qt->AddCoverArt( $pic1, 13 );
+$qt->WriteFile('t/temp04.m4a');
+$qt = new Audio::M4P::QuickTime( file => 't/temp04.m4a' );
+ok( scalar @{$qt->GetCoverArt()} == 1,  "added artwork as cover art" );
+

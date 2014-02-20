@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 use Audio::M4P::Atom;
 
@@ -891,12 +891,51 @@ sub iTMS_MetaInfo {
 sub GetCoverArt {
     my ($self) = @_;
     my @covr = $self->FindAtom('covr') or return;
-    my @artwork;
+    my @artwork = ();
     foreach my $atm (@covr) {
         my $data_atm = $atm->Contained('data') or next;
         push @artwork, substr( $data_atm->data, 8 );
     }
     return \@artwork;
+}
+
+# remove all cover art, return number of covers removed
+# does not remove an empty covr atom (one without cover data)
+sub DeleteAllCoverArt {
+    my ($self) = @_;
+    my $removed = 0;
+    while( my $atm = $self->FindAtom('covr') ) {
+		my @atoms = $atm->Contained('data') or next;
+		my $siz  = $atm->size;
+		my $pos  = $atm->start;
+		$atm->selfDelete() or return;
+		$self->FixStco( $siz, $pos );
+		$removed += scalar @atoms;	
+	}
+	return $removed;	
+}
+
+# add a single album cover by EITHER adding one covr atom 
+# OR adding one cover's data to an existing covr atom
+# takes a argument which should be a compatible graphic format binary
+# but does NO checks for compatibility with iTunes' cover art display
+# type OUGHT TO BE 13 for jpeg, 14 for png graphics format,
+# but method DOES NOT CHECK for type except will default to 13 
+# if no type argument provided
+sub AddCoverArt {
+    my ($self, $art, $type) = @_;
+    $type = 13 unless $type;
+    my $covr = $self->FindAtom('covr');
+    if( !$covr )
+    {
+		my $ilst = $self->FindAtom('ilst') || $self->MakeIlstAtom || return;
+        $ilst->insertNew( 'covr', '' );
+        $self->FixStco( -8, $ilst->start );
+        return unless $covr = $self->FindAtom('covr');
+    }
+	$covr->insertNew( 'data', pack( 'NN', $type, 0 ) . $art );
+	$self->FixStco( -16 - length $art, $covr->start );
+	return 1;
 }
 
 #-----------------------------------------------------------
@@ -1203,6 +1242,31 @@ programmers than the MP3::Tag and Audio::TagLib compatible methods below.
   
 Returns a reference to an array of cover artwork. Note: the artwork routines
 were suggested and largely contributed by pucklock. (Thanks!)
+
+
+=item B<DeleteAllCoverArt>
+
+$qt->DeleteAllCoverArt;
+
+Delete all cover art from the file. This removes all data from the covr atom, 
+if any.  Returns the number of cover data atoms deleted.
+
+
+=item B<AddCoverArt>
+
+# Add cover artwork to the file. Creates a new covr atom if needed. 
+# Returns 1 if successful, otherwise null.
+
+$qt->AddCoverArt( $jpeg_art, 13 );  # $jpeg_art is an iTunes compatible jpeg 
+$qt->AddCoverArt( $jpeg_art );      # the same as above, defaults to type 13
+$qt->AddCoverArt( $png_art, 14 );   # PNG graphics are data type 14
+
+The method adds a single album cover by either adding one covr atom or 
+by adding one cover's data to an existing covr atom. Takes a argument which 
+should be a compatible graphic format binary, but does NO checks for 
+compatibility with iTunes' cover art display. The type should be 13 
+for jpeg, 14 for png graphics format, but defaults to 13.
+
 
 =back
 

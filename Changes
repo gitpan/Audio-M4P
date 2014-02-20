@@ -1,5 +1,8 @@
 Revision history for Perl modules under Audio::M4P
 
+0.54 19 Feb 2014
+	- added AddCoverArt and DeleteAllCoverArt methods, thanks to F.J. Rueda for helping test
+
 0.53 Thu 03 Jan 2014
     -pod doc fix
 
