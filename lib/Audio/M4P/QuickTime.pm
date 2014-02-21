@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.54';
+our $VERSION = '0.55';
 
 use Audio::M4P::Atom;
 
@@ -887,17 +887,21 @@ sub iTMS_MetaInfo {
     return \%info;
 }
 
+
 # Get cover art--returns a reference to an array of cover artwork
 sub GetCoverArt {
     my ($self) = @_;
     my @covr = $self->FindAtom('covr') or return;
     my @artwork = ();
     foreach my $atm (@covr) {
-        my $data_atm = $atm->Contained('data') or next;
-        push @artwork, substr( $data_atm->data, 8 );
+        my @data_atms = $atm->Contained('data') or next;
+        foreach my $dt ( @data_atms ) {
+			push @artwork, substr( $dt->data, 8 );
+		}
     }
     return \@artwork;
 }
+
 
 # remove all cover art, return number of covers removed
 # does not remove an empty covr atom (one without cover data)
@@ -1246,7 +1250,7 @@ were suggested and largely contributed by pucklock. (Thanks!)
 
 =item B<DeleteAllCoverArt>
 
-$qt->DeleteAllCoverArt;
+  $qt->DeleteAllCoverArt;
 
 Delete all cover art from the file. This removes all data from the covr atom, 
 if any.  Returns the number of cover data atoms deleted.
@@ -1254,12 +1258,13 @@ if any.  Returns the number of cover data atoms deleted.
 
 =item B<AddCoverArt>
 
-# Add cover artwork to the file. Creates a new covr atom if needed. 
-# Returns 1 if successful, otherwise null.
 
-$qt->AddCoverArt( $jpeg_art, 13 );  # $jpeg_art is an iTunes compatible jpeg 
-$qt->AddCoverArt( $jpeg_art );      # the same as above, defaults to type 13
-$qt->AddCoverArt( $png_art, 14 );   # PNG graphics are data type 14
+  $qt->AddCoverArt( $jpeg_art, 13 );  # $jpeg_art is an iTunes compatible jpeg 
+  $qt->AddCoverArt( $jpeg_art );      # the same as above, defaults to type 13
+  $qt->AddCoverArt( $png_art, 14 );   # PNG graphics are data type 14
+
+Add cover artwork to the file. Creates a new covr atom if needed. Returns 1 if 
+successful, otherwise null.
 
 The method adds a single album cover by either adding one covr atom or 
 by adding one cover's data to an existing covr atom. Takes a argument which 
