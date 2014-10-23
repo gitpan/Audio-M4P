@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-our $VERSION = '0.55';
+our $VERSION = '0.57';
 
 use Audio::M4P::Atom;
 
@@ -115,7 +115,7 @@ our %alternate_tag_types = (
 );
 
 our @m4p_not_m4a_atom_types = qw( sinf cnID apID atID plID geID akID ---- );
-our @apple_user_id_atoms = qw( pinf apID cnID atID plID geID sfID akID purd );
+our @apple_user_id_atoms = qw( pinf apID cnID atID plID geID sfID akID purd ownr );
 
 our %iTMS_dict_meta_types = (
     copyright          => 'cprt',
@@ -905,14 +905,16 @@ sub GetCoverArt {
 
 # remove all cover art, return number of covers removed
 # does not remove an empty covr atom (one without cover data)
+# but otherwise will remove covr atoms as well as cover data
 sub DeleteAllCoverArt {
     my ($self) = @_;
     my $removed = 0;
-    while( my $atm = $self->FindAtom('covr') ) {
+    my @covr = $self->FindAtom('covr');
+    foreach my $atm (@covr) {
 		my @atoms = $atm->Contained('data') or next;
 		my $siz  = $atm->size;
 		my $pos  = $atm->start;
-		$atm->selfDelete() or return;
+		$atm->selfDelete() or next;
 		$self->FixStco( $siz, $pos );
 		$removed += scalar @atoms;	
 	}

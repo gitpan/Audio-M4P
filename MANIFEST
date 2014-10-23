@@ -28,3 +28,4 @@ t/booka.mp4
 t/emotre.m4a
 Makefile.PL
 META.yml                                 Module meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)

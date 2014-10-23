@@ -1,7 +1,10 @@
 Revision history for Perl modules under Audio::M4P
 
+0.57 Thu Oct 22 2014
+	- added ownr atom to list of Apple iTMS user ID atoms 
+
 0.55 Fri 21 Feb 2014
-	- fix to get multiple album covers froma single covr atom if needed
+	- fix to get multiple album covers from a single covr atom if needed
 	- pod fixes
 
 0.54 Wed 19 Feb 2014

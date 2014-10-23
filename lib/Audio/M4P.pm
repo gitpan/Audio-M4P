@@ -2,7 +2,7 @@ use strict;
 # kwalitee, schmalitee...
 # buggy CPANTS wants even dumb doc placeholder modules to use strict...
 
-our $VERSION = '0.53';
+our $VERSION = '0.57';
 
 =head1 NAME
 
